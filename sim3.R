@@ -10,7 +10,7 @@ library(psych)
 library(here)
 library(posterior)
 library(tidybayes)
-
+library(bayesplot)
 
 #### Set Options ####
 dir_path <- here()
