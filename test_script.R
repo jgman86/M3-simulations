@@ -1,20 +1,15 @@
-file <- file.path(cmdstan_path(), "examples", "bernoulli", "bernoulli.stan")
-mod3_nc <- cmdstan_model(, cpp_options=list(stan_threads=T))
 mod3_norm <- cmdstan_model(stan_path_M3_EE)
-mod3_univ <- cmdstan_mode()
+
 
 # Simulate Data for Estimation ----
-# 
-# 
-# 
-# 
+
 
 nRetrievals <- 500
-minFT <- 0.2
-maxFT <- 2
+minFT <- 0.5
+maxFT <- 1.5
 nFT <- c(2,4) # 2,4,10 Conditions between 0.2 and 2
 SampleSize <- 100
-con_nFT =4
+con_nFT =3
 conFT <- seq(from = minFT, to = maxFT, length.out = con_nFT) # eventuell log scale 0.2 0.8 2.4 oder so?
 
 # Set Range for Parameter Means
@@ -28,7 +23,7 @@ eta <- 5 # Simulated N = 10000 with eta = 5, 95 % of all values lie within 0 -+ 
 
 sigC <- c(0.125,0.5)
 sigA <- c(0.125,0.5)
-sigF <- c(0.0001,0.1)
+sigF <- c(0.1,0.5)
 sigE <- c(1,2)
 sigR <- c(0.125,0.5) # abhänbgig von removal parameter -> analog zu c und a
 sigB <- c(0.0001, 0.1)
@@ -39,9 +34,9 @@ sigB <- c(0.0001, 0.1)
 relCA <- runif(1, min = range_muA[1],max = range_muA[2])
 Mean_Cpar <- 8
 Mean_Apar <- 4
-Mean_Epar <- runif(1, min =range_muE[1], max = range_muE[2])
-Mean_Rpar <- runif(1, min= range_muR[1], max = range_muR[2])
-Mean_Fpar <-  runif(1, min= range_muF[1], max = range_muF[2])
+Mean_Epar <- 0.4
+Mean_Rpar <- 15
+Mean_Fpar <-  0.3
 log_mu_f <- log(Mean_Fpar/(1-Mean_Fpar))
 Mean_bpar <- 0.1
 
@@ -54,11 +49,11 @@ hyper_mus <- c(Mean_Cpar,Mean_Apar,log_mu_f,Mean_Epar,Mean_Rpar, Mean_bpar)
 
 # Sample Variances and Set Covariances----
 
-sig_c <- runif(1, min = sigC[1], max = sigC[2])*Mean_Cpar
-sig_a <- runif(1, min = sigA[1], max = sigA[2])*Mean_Apar 
+sig_c <- Mean_Cpar*runif(1, min = sigC[1], max= sigC[2])
+sig_a <- Mean_Apar*runif(1, min = sigA[1], max= sigA[2])
 sig_f <- runif(1, min = sigF[1], max= sigF[2])
-sig_e <- runif(1, min = sigE[1], max= sigE[2])
-sig_r <- runif(1, min = sigR[1], max= sigR[2])*Mean_Rpar
+sig_e <- Mean_Epar*runif(1, min = sigE[1], max= sigE[2])
+sig_r <- Mean_Rpar*runif(1, min = sigR[1], max= sigR[2])
 sig_b <- 0.001
 
 
@@ -113,32 +108,7 @@ data <- simData_CSpanEE(ParmsFT,as.vector(respOpt_Cspan(4,16)),1000,FT)
 # Generate Stan Data ----
 
 
-
-
-init_fun_FT_nc_univ <- function()
-{
-  list(c=cbind(runif(stan.dat$N,1,10)),
-       a=cbind(runif(stan.dat$N,1,10)),
-       log_f=cbind(runif(stan.dat$N,-1,1)),
-       EE=cbind(runif(stan.dat$N,1,10)),
-       r=cbind(runif(stan.dat$N,1,10)),
-        mu_c=cbind(runif(stan.dat$N,1,10)),
-        mu_a=cbind(runif(stan.dat$N,1,10)),
-        mu_r=cbind(runif(stan.dat$N,1,10)),
-        mu_e=cbind(runif(stan.dat$N,1,10)))
-   
-}
-
-init_fun_FT_nc_univ <- function()
-{
-  list(hyper_pars=cbind(runif(stan.dat$J,1,10)),
-        subj_pars=cbind(runif(stan.dat$N,1,10)))
-  
-}
-
-
-
-stan.dat <- list(count = data[,4:8], 
+stan1.dat <- list(count = data[,4:8], 
                  K = 5,
                  R = as.vector(respOpt_Cspan(4,16)),
                  J = length(sigs)-1,
@@ -149,26 +119,39 @@ stan.dat <- list(count = data[,4:8],
                  scale_b = 0.1)
                   #f = .5)
 
-fit3 <- mod3_norm$sample(data = stan1.dat,
-                         chains = 4, 
-            parallel_chains = 4,iter_warmup = 500,iter_sampling = 1000,
-            adapt_delta = .99, max_treedepth = 15,
-            init = init_fun_FT_nc_univ,
-            show_messages = F)
-            
+stan_fit_test <- function(mod, dat){
   
-  gf<-stan_fit(mod3_norm,dat = stan1.dat)
-  rbind(gf)
-  bayesplot::mcmc_combo(fit3$draws(c("hyper_pars")),alpha=0.2)
-  bayesplot::rhat(fit3$cmdstan_summary())
+  #set_cmdstan_path(path="C:/Coding/cmdstan-2.30.0/")
   
-          ret <- as.vector((hyper_mu_c = gf[1,2])),hyper_mu_a = results[2,2], hyper_mu_f = results[3,2],hyper_mu_e = results[4,2],hyper_mu_r = results[4,2])              
   
-  post_samples_hyper <- as_draws_matrix(fit3$draws(c("hyper_pars","mu_f")))
-  post_samples_subj <- as_draws_matrix(fit3$draws(c("c","a","f","EE","r")))
-
- 
+  init <- function()
+  {
+    list(hyper_pars=cbind(runif(dat$J,10,20)),
+         subj_pars=cbind(runif(dat$N,1,10)))
+    
+  }
   
- summary_hyper <- posterior::summarise_draws(post_samples_hyper)
- summary_subj <- posterior::summarise_draws(post_samples_subj)
+  
+  # Stan is noisy, so tell it to be more quiet()
+  M3 <-  mod$sample(dat,
+                          refresh = 100,
+                          chains = 4,
+                          parallel_chains=4, 
+                          iter_warmup=500,
+                          iter_sampling=1000,
+                          adapt_delta=.99,
+                          max_treedepth=15,
+                          init = init,
+                          show_messages = F)
+  
+  M3 <- M3$summary(c("hyper_pars","subj_pars","mu_f","f"), mean,Mode,sd,rhat,HDInterval::hdi)
+  
+  M3
+}
+  
+  results <- stan_fit_test(mod3_norm,dat = stan1.dat)
+  
+d<-results$summary(c("hyper_pars","mu_f","f"), mean, sd,rhat,HDInterval::hdi)
+  
+results$  
   

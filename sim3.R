@@ -9,17 +9,17 @@ library(data.table)
 library(psych)
 library(here)
 library(posterior)
+library(tidybayes)
 
 
 #### Set Options ####
 dir_path <- here()
-cmd_path <- paste0("C:/Coding/cmdstan-2.30.0")
-set_cmdstan_path(cmd_path)
+#cmd_path <- paste0("C:/Coding/cmdstan-2.30.0")
+set_cmdstan_path()
 cmdstan_version()
 
 ### Source Functions ####
-source(paste0(dir_path,"/Functions/M3_functions.R"))
-
+source("Functions/M3_functions.R")
 #### Define Simulation Design and SetUp Model----
 
 ###### Varying Simulation Factors ---- 
@@ -41,7 +41,7 @@ minFT <- 0.5
 maxFT <- 2
 
 ###### Model Path #####
-stan_path_M3_EE <- paste0(dir_path,"/Models/M3_ComplexSpan_EE_LKJ_Cholesky_NC.stan")
+stan_path_M3_EE <- paste0("Models/M3_ComplexSpan_EE_LKJ_Cholesky_NC.stan")
 #stan_path_M3_Upd <- paste0(dir_path,"/Models/M3_") add upadting model 
 
 
@@ -70,7 +70,7 @@ fo <- list(M3_CS_EE=cmdstan_model(stan_path_M3_EE),
 ##### Set Up Fitting Function for cmdstan
 stan_fit <- function(mod, dat){
   
-  set_cmdstan_path(path="C:/Coding/cmdstan-2.30.0/")
+  #set_cmdstan_path(path="C:/Coding/cmdstan-2.30.0/")
   
   
   init <- function()
@@ -243,7 +243,7 @@ Summarise <- function(condition, results, fixed_objects=NULL) {
 
 
 SimClean()
-res <- runSimulation(sim3, replications = 100, generate = Generate_M3, 
+res <- runSimulation(sim3, replications = 1, generate = Generate_M3, 
                      analyse = Analyze_M3, summarise = Summarise, 
                      fixed_objects = fo, parallel=TRUE, 
                      packages = c("cmdstanr","posterior","tmvtnorm","psych"),ncores =32)

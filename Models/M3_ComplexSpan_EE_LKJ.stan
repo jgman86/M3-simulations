@@ -13,7 +13,7 @@ data {
   int count[N*Con,K];   // observed data
   real scale_b;     // set scaling for background noise
   vector[Con] Freetime ;        // freetime conditions after distractor encoding (e.g. 500 ms, 1000 ms or 1500 ms) 
-  real f;
+  //real f;
 }
 
 parameters {
@@ -32,8 +32,8 @@ parameters {
 transformed parameters{
   // Transform f Parameter
   
-  //real f[N] = inv_logit(subj_pars[,3]);
-  //real mu_f = inv_logit(hyper_pars[3]);
+  real f[N] = inv_logit(subj_pars[,3]);
+  real mu_f = inv_logit(hyper_pars[3]);
   
   // activations
   real acts_IIP[N*Con];
@@ -54,10 +54,10 @@ transformed parameters{
   
   for(j in 1:Con) {
     
-    acts_IIP[j + (i-1)*Con] = scale_b + ((1+ subj_pars[i,3]*Freetime[j])*subj_pars[i,1]) + subj_pars[i,2]; // Item in Position                      
+    acts_IIP[j + (i-1)*Con] = scale_b + ((1+ subj_pars[i,4]*Freetime[j])*subj_pars[i,1]) + subj_pars[i,2]; // Item in Position                      
     acts_IOP[j + (i-1)*Con] = scale_b + subj_pars[i,2];        // Item in Other Position
-    acts_DIP[j + (i-1)*Con] = scale_b + f*((exp(-subj_pars[i,4]*Freetime[j])* subj_pars[i,2]) + subj_pars[i,1]);// Distractor in Position
-    acts_DIOP[j + (i-1)*Con] = scale_b +  f*subj_pars[i,2]; // Distractor in other Position
+    acts_DIP[j + (i-1)*Con] = scale_b + f[i]*((exp(-subj_pars[i,5]*Freetime[j])* subj_pars[i,2]) + subj_pars[i,1]);// Distractor in Position
+    acts_DIOP[j + (i-1)*Con] = scale_b +  f[i]*subj_pars[i,2]; // Distractor in other Position
     acts_NPL[j + (i-1)*Con] = scale_b; // non presented Lure
     
     SummedActs[j + (i-1)*Con] = R[1] * acts_IIP[j + (i-1)*Con] + R[2] * acts_IOP[j + (i-1)*Con] + R[3] * acts_DIP[j + (i-1)*Con]+
@@ -79,11 +79,11 @@ model {
   
   hyper_pars[1] ~ normal(20,10); // c
   hyper_pars[2] ~ normal(2,10); // a
-  //hyper_pars[3] ~ normal(0,10); //f
-  hyper_pars[3] ~ normal(1,10); // EE
-  hyper_pars[4] ~ normal(1,10); // r
+  hyper_pars[3] ~ normal(0,10); //f
+  hyper_pars[4] ~ normal(1,10); // EE
+  hyper_pars[5] ~ normal(1,10); // r
   
-  Omega ~ lkj_corr(5);
+  Omega ~ lkj_corr(2);
   sigma ~ gamma(1,0.01);
   
   

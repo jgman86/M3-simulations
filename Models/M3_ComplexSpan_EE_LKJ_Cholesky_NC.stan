@@ -43,28 +43,24 @@ parameters {
   
   cholesky_factor_corr[J] L_Omega;
   vector<lower=0>[J] sigma;
-  vector [J] hyper_pars;
+  vector[J] hyper_pars;
   matrix[J,N] theta;
   
 }
 
 
 transformed parameters {
-  
   // non-centered multivariate
-  
   matrix[J,N] subj_pars =  (
     diag_pre_multiply( sigma, L_Omega )
     * theta
     + rep_matrix(hyper_pars,N)
     ) ;
     
-     // Transform f Parameter
-  
+    // Transform f Parameter
     real mu_f = inv_logit(hyper_pars[3]);
-    row_vector[N] f = inv_logit(theta[3,]);
-    
-    
+    row_vector[N] f = inv_logit(subj_pars[3,]);
+
     // activations
     real acts_IIP[N*Con];
     real acts_IOP[N*Con];
@@ -85,7 +81,7 @@ transformed parameters {
     
     for(j in 1:Con) {
       
-      acts_IIP[j + (i-1)*Con] = scale_b +  ((1+ subj_pars[4,i]*Freetime[j])* subj_pars[1,i]) + subj_pars[2,i]; // Item in Position                      
+      acts_IIP[j + (i-1)*Con] = scale_b +  ((1+subj_pars[4,i]*Freetime[j])* subj_pars[1,i]) + subj_pars[2,i]; // Item in Position                      
       acts_IOP[j + (i-1)*Con] = scale_b + subj_pars[2,i];        // Item in Other Position
       acts_DIP[j + (i-1)*Con] = scale_b + f[i]*((exp(-subj_pars[5,i]*Freetime[j])*subj_pars[1,i]) + subj_pars[2,i]); // Distractor in Position
       acts_DIOP[j + (i-1)*Con] = scale_b + f[i]*subj_pars[2,i]; // Distractor in other Position
