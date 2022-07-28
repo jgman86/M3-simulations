@@ -86,8 +86,8 @@ stan_fit <- function(mod, dat){
                          refresh = 0,
                          chains = 4,
                          #parallel_chains=4, 
-                         iter_warmup=150,
-                         iter_sampling=500,
+                         iter_warmup=1500,
+                         iter_sampling=3000,
                          adapt_delta=.95,
                          max_treedepth=15,
                          init = init,
@@ -245,7 +245,7 @@ Summarise <- function(condition, results, fixed_objects=NULL) {
 
 SimClean()
 res <- runSimulation(sim3, replications = 1, generate = Generate_M3, 
-                     analyse = Analyze_M3, summarise = Summarise, 
+                     analyse = Analyze_M3,  
                      fixed_objects = fo, parallel=TRUE, 
                      packages = c("cmdstanr","posterior","tmvtnorm","psych"),ncores =32)
 
