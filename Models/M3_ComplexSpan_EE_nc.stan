@@ -38,16 +38,15 @@ parameters {
 }
 
 transformed parameters{
-  // Transform f Parameter
   
-  
-  
-  real <lower=0> c[N];
-  real <lower=0> a[N];
-  real <lower=0> EE[N];
-  real <lower=0> r[N];
+  real c[N];
+  real a[N];
+  real EE[N];
+  real r[N];
   real log_f[N];
-  
+  real f[N];
+  real mu_f;
+  real sig_f;
   
   // activations
   real acts_IIP[N*Con];
@@ -71,25 +70,26 @@ transformed parameters{
     log_f[i] = logSig_f * log_f_raw[i] + logMu_f; 
     EE[i] = mu_e + EE_raw[i] *sig_e;
     r[i] = mu_r + r_raw[i]  * sig_r;
+    f[i] =  inv_logit(log_f[i]);
     
   }
   
-  real f[N] = inv_logit(log_f);
-  real mu_f = inv_logit(logMu_f);
-  real sig_f = sd(f);
+  
+  mu_f = inv_logit(logMu_f);
+  sig_f = sd(f);
   
   
   
   // loop over subjects and conditions to compute activations and probabilites
   
   for (i in 1:N){ // for each subject
-    for(j in 1:Con) {
+  for(j in 1:Con) {
     
     // Best Fit for Complex Span Task
     
     acts_IIP[j + (i-1)*Con] = scale_b + ((1+EE[i]*Freetime[j])*c[i]) + a[i]; // Item in Position                      
     acts_IOP[j + (i-1)*Con] = scale_b + a[i];        // Item in Other Position
-    acts_DIP[j + (i-1)*Con] = scale_b + f[i]*((exp(-r[i]*Freetime[j])*(c[i]+a[i])));// Distractor in Position
+    acts_DIP[j + (i-1)*Con] = scale_b + f[i]*((exp(-r[i]*Freetime[j])*c[i])+a[i]);// Distractor in Position
     acts_DIOP[j + (i-1)*Con] = scale_b + f[i] *a[i]; // Distractor in other Position
     acts_NPL[j + (i-1)*Con] = scale_b; // non presented Lure
     
@@ -101,7 +101,7 @@ transformed parameters{
     probs[j + (i-1)*Con,3] = (R[3] * acts_DIP[j + (i-1)*Con]) ./ (SummedActs[j + (i-1)*Con]);
     probs[j + (i-1)*Con,4] = (R[4] * acts_DIOP[j + (i-1)*Con]) ./ (SummedActs[j + (i-1)*Con]);
     probs[j + (i-1)*Con,5] = (R[5] * acts_NPL[j + (i-1)*Con]) ./ (SummedActs[j + (i-1)*Con]);
-    }
+  }
   }
   
 }
