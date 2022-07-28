@@ -23,10 +23,10 @@ source("Functions/M3_functions.R")
 #### Define Simulation Design and SetUp Model----
 
 ###### Varying Simulation Factors ---- 
-N <- c(4)
-K <- c(8,16)
-nRetrievals <- c(500)
-nFT<- c(2) # 2,4,10 Conditions between 0.2 and 2
+N <- c(1,2,3,4,5)
+K <- c(1,2,4,8,16)
+nRetrievals <- c(250,500)
+nFT<- c(2,4,6,8) # 2,4,10 Conditions between 0.2 and 2
 
 ###### Create Simulation Table ---- 
 sim3 <- createDesign(OtherItems=N,
@@ -35,8 +35,8 @@ sim3 <- createDesign(OtherItems=N,
                      nFreetime=nFT)
 
 ###### Fixed Simulation Factors ---- 
-SampleSize <- 10
-reps2con <- 100
+SampleSize <- 100
+reps2con <- 1000
 minFT <- 0.5
 maxFT <- 2
 
@@ -93,7 +93,7 @@ stan_fit <- function(mod, dat){
                          init = init,
                          show_messages = FALSE))
   
-  M3 <- M3$summary("hyper_pars", mean)$mean[1:5]
+  M3 <- list(parms,M3$summary(c("hyper_pars","subj_pars"), mean,sd,Mode,HDInterval::hdi))
   
   M3
 }
@@ -209,7 +209,8 @@ Generate_M3 <- function(condition, fixed_objects=NULL) {
               Con = length(unique(data[,"Freetime"])),
               Freetime = unique(data[,"Freetime"]),
               retrievals = Retrievals,
-              scale_b = 0.1)
+              scale_b = 0.1,
+              parms=parms)
   
   dat  
 }
