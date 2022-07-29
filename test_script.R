@@ -136,6 +136,7 @@ stan2.dat <- list(count = data[,4:8],
 M3 <- stan_fit(mod3_norm,dat = stan1.dat)
 
 
+
 # summarise results
 
 hyper <- M3[[1]] %>% pivot_wider(.,names_from = "variable",values_from = c("mean","Mode","sd","rhat","upper","lower")) 
@@ -193,6 +194,18 @@ SimDesign::RMSE(f$mean_f,parms[,"f"])
 
 test <- list(stan1.dat,parms)
 
+hyper <- M3[[1]] %>% mutate(variable = case_when(variable == "hyper_pars[1]" ~ "mu_c", 
+                                                 variable == "hyper_pars[2]" ~ "mu_a", 
+                                                 variable == "hyper_pars[3]" ~ "logMu_f", 
+                                                 variable == "hyper_pars[4]" ~ "mu_e", 
+                                                 variable == "hyper_pars[5]" ~ "mu_r",
+                                                 variable == "mu_f" ~ "mu_f")) %>%
+                                       pivot_wider(.,names_from = "variable",values_from = c("mean","Mode","sd","rhat","upper","lower")) 
+
+RMSE(hyper$mean_mu_f,Mean_Fpar)
+
+hyper$mean_mu_f
+
 samples<- M3[[]]
 samples[,,hyper_pars]
 
@@ -210,3 +223,19 @@ init_test <-
 
 a<-test[[2]][,"conA"]
 data.frame(d=a,f=test[[2]][,"conA"])
+
+
+f <- M3[[3]] %>% mutate(ID = seq(1:10), theta = "f") %>% relocate(c("ID","theta"), .before = variable) %>% select(-variable) %>%
+  pivot_wider(.,names_from = "theta",values_from = c("mean","Mode","sd","rhat","upper","lower"))
+
+
+Generate_M3(sim3, fo)
+
+M3[[4]] %>% separate(variable,into = c("ID","Category"),sep = ",") %>% 
+  mutate(ID= str_remove_all(ID,pattern="count_rep\\["), Category=str_remove_all(Category,"\\]"), mean=round(mean,0)) %>%
+        pivot_wider(., names_from = Category, values_from = mean) %>% 
+        rename("IIP"=`1`,"IOP" = `2`,"DIP" = `3`,"DIOP" = `4`,"NPL" = `5`)  
+                                                                                                 
+
+kkk<-Analyze_M3(sim3,dat = list(stan1.dat,parms,data,hyper_mus),fo)
+

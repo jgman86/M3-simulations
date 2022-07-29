@@ -93,15 +93,15 @@ stan_fit <- function(mod, dat){
   
   # Stan is noisy, so tell it to be more quiet()
   M3 <-  quiet(mod$sample(dat,
-                         refresh = 0,
-                         chains = 4,
-                         #parallel_chains=4, 
-                         iter_warmup=150,
-                         iter_sampling=500,
-                         adapt_delta=.95,
-                         max_treedepth=15,
-                         init = init,
-                         show_messages = FALSE))
+                          refresh = 0,
+                          chains = 4,
+                          #parallel_chains=4, 
+                          iter_warmup=150,
+                          iter_sampling=500,
+                          adapt_delta=.95,
+                          max_treedepth=15,
+                          init = init,
+                          show_messages = FALSE))
   
   M3_hyper <- M3$summary(c("hyper_pars","mu_f"), mean,Mode,sd,rhat,HDInterval::hdi)
   M3_subj <- M3$summary(c("subj_pars"), mean,sd,rhat,Mode,HDInterval::hdi)
@@ -111,7 +111,7 @@ stan_fit <- function(mod, dat){
   
   M3 <- list(M3_hyper,M3_subj,M3_f,M3_count_rep,M3_omega)
   
-  M3
+  return(M3)
 }
 
 ##### Set Up Simulation Functions for Sim Design ----
@@ -135,7 +135,7 @@ Generate_M3 <- function(condition, fixed_objects=NULL) {
   sigR <-fixed_objects$range_muR
   sigB <- fixed_objects$sigB
   
- 
+  
   # Generate FreeTime Conditions
   
   conFT <- seq(from = minFT, to = maxFT, length.out = nFreetime) # eventuell log scale 0.2 0.8 2.4 oder so?
@@ -217,19 +217,19 @@ Generate_M3 <- function(condition, fixed_objects=NULL) {
   
   
   stan.dat <- list(count = data[,4:8], 
-              K = 5,
-              R = as.vector(respOpt_Cspan(OtherItems,NPL)),
-              J = length(sigs)-1,
-              N = length(unique(data[,"ID"])),
-              Con = length(unique(data[,"Freetime"])),
-              Freetime = unique(data[,"Freetime"]),
-              retrievals = Retrievals,
-              scale_b = 0.1)
+                   K = 5,
+                   R = as.vector(respOpt_Cspan(OtherItems,NPL)),
+                   J = length(sigs)-1,
+                   N = length(unique(data[,"ID"])),
+                   Con = length(unique(data[,"Freetime"])),
+                   Freetime = unique(data[,"Freetime"]),
+                   retrievals = Retrievals,
+                   scale_b = 0.1)
   
   theta <- parms
   
-  dat  <- list(stan.dat,theta,data)
-  dat
+  dat  <- list(stan.dat,theta,data,hyper_mus)
+  return(dat)
 }
 
 
@@ -249,7 +249,13 @@ Analyze_M3 <- function(condition,dat,fixed_objects=NULL)
   
   # Merge Data
   
-  hyper <- fit3[[1]] %>% pivot_wider(.,names_from = "variable",values_from = c("mean","Mode","sd","rhat","upper","lower")) 
+  hyper <- fit3[[1]] %>% mutate(variable = case_when(variable == "hyper_pars[1]" ~ "mu_c", 
+                                                     variable == "hyper_pars[2]" ~ "mu_a", 
+                                                     variable == "hyper_pars[3]" ~ "logMu_f", 
+                                                     variable == "hyper_pars[4]" ~ "mu_e", 
+                                                     variable == "hyper_pars[5]" ~ "mu_r",
+                                                     variable == "mu_f" ~ "mu_f")) %>%
+    pivot_wider(.,names_from = "variable",values_from = c("mean","Mode","sd","rhat","upper","lower")) 
   
   subj <- fit3[[2]]  %>% mutate(variable = str_remove_all(variable, "subj_pars")) %>% 
     separate(col = variable,into = c("theta","ID"),sep = ",")  %>% 
@@ -261,8 +267,22 @@ Analyze_M3 <- function(condition,dat,fixed_objects=NULL)
   
   f <- fit3[[3]] %>% mutate(ID = seq(1:fixed_objects$SampleSize), theta = "f") %>% relocate(c("ID","theta"), .before = variable) %>% select(-variable) %>%
     pivot_wider(.,names_from = "theta",values_from = c("mean","Mode","sd","rhat","upper","lower"))
-
-  # Recoveries of Subject Pars
+  
+  
+  count_rep <- fit3[[4]] %>% separate(variable,into = c("ID","Category"),sep = ",") %>% 
+    mutate(ID= str_remove_all(ID,pattern="count_rep\\["), Category=str_remove_all(Category,"\\]"), mean=round(mean,0)) %>%
+    pivot_wider(., names_from = Category, values_from = mean) %>% 
+    rename("IIP"=`1`,"IOP" = `2`,"DIP" = `3`,"DIOP" = `4`,"NPL" = `5`)  
+  
+  # RMSE for Hyper Pars
+  
+  rmse_mu_c <- RMSE(hyper$mean_mu_c,dat[[4]][1])
+  rmse_mu_a <- RMSE(hyper$mean_mu_a,dat[[4]][2])
+  rmse_mu_f <- RMSE(hyper$mean_mu_f,1/(1+exp(-dat[[4]][3])))
+  rmse_mu_e <- RMSE(hyper$mean_mu_e,dat[[4]][4])
+  rmse_mu_r <- RMSE(hyper$mean_mu_r,dat[[4]][5])
+  
+  # Recoveries of Subject theta
   recoveries_c <- cor(dat[[2]][,"conA"],subj$mean_c)
   recoveries_a <- cor(dat[[2]][,"genA"],subj$mean_a)
   recoveries_f <- cor(dat[[2]][,"f"],f$mean_f)
@@ -270,7 +290,15 @@ Analyze_M3 <- function(condition,dat,fixed_objects=NULL)
   recoveries_r <- cor(dat[[2]][,"r"],subj$mean_r)
   
   
-  # max rhat for subj pars
+  # RMSE for subject theta
+  
+  rmse_c <- RMSE(subj$mean_c,dat[[2]][,"conA"])
+  rmse_a <- RMSE(subj$mean_a,dat[[2]][,"genA"])
+  rmse_f <- RMSE(f$mean_f,dat[[2]][,"f"])
+  rmse_e <- RMSE(subj$mean_EE,dat[[2]][,"e"])
+  rmse_r <- RMSE(subj$mean_r,dat[[2]][,"r"])
+  
+  # max rhat for subject theta 
   
   max_rhat_c <- subj %>% select(contains("rhat_c")) %>% max()
   max_rhat_a <- subj %>% select(contains("rhat_a")) %>% max()
@@ -278,22 +306,45 @@ Analyze_M3 <- function(condition,dat,fixed_objects=NULL)
   max_rhat_e <- subj %>% select(contains("rhat_EE")) %>% max()
   max_rhat_r <- subj %>% select(contains("rhat_r")) %>% max()
   
-
+  # Predictive Correlation for Different Response Categories
+  
+  cor_rep_IIP <- cor(dat[[3]][,"IIP"],count_rep$IIP)
+  cor_rep_IOP <- cor(dat[[3]][,"IOP"],count_rep$IOP)
+  cor_rep_DIP <- cor(dat[[3]][,"DIP"],count_rep$DIP)
+  cor_rep_DIOP <- cor(dat[[3]][,"DOP"],count_rep$DIOP)
+  cor_rep_NPL <- cor(dat[[3]][,"NPL"],count_rep$NPL)
+  
+  
   # Merge Results for current iteration
   ret <- data.frame(re_c = recoveries_c,
+                    rmse_c = rmse_c,
+                    rmse_mu_c=rmse_mu_c,
                     rhat_c = max_rhat_c, 
                     re_a=recoveries_a,
+                    rmse_a = rmse_a,
+                    rmse_mu_a=rmse_mu_a,
                     rhat_a=max_rhat_a,
                     re_f= recoveries_f,
+                    rmse_f = rmse_f,
+                    rmse_mu_f=rmse_mu_f,
                     rhat_f=max_rhat_f,
                     re_e = recoveries_e,
+                    rmse_e = rmse_e,
+                    rmse_mu_e=rmse_mu_e,
                     rhat_e = max_rhat_e,
                     re_r=recoveries_r,
-                    rhat_r=max_rhat_r)
+                    rmse_r = rmse_r,
+                    rmse_mu_r=rmse_mu_r,
+                    rhat_r=max_rhat_r,
+                    cor_IIP = cor_rep_IIP,
+                    cor_IOP = cor_rep_IOP,
+                    cor_DIP = cor_rep_DIP,
+                    cor_DIOP= cor_rep_DIOP,
+                    cor_NPL = cor_rep_NPL)
   
   ret
   
- 
+  
   
 }
 
@@ -301,19 +352,36 @@ Analyze_M3 <- function(condition,dat,fixed_objects=NULL)
 
 Summarise <- function(condition, results, fixed_objects=NULL) {
   
+  
   # Calculate Meta Statistics over all Replications 
-  ret <- c(cor_c = mean(results$re_c),
+  ret <- c(cor_c = fisherz2r(mean(fisherz(results$re_c))),
            max_rhat_c = max(results$rhat_c),
-           cor_a=mean(results$re_a),
+           mean_rmse_mu_c = mean(results$rmse_mu_c),
+           mean_rmse_c = mean(results$rmse_c),
+           cor_a=fisherz2r(mean(fisherz(results$re_a))),
+           mean_rmse_mu_a = mean(results$rmse_mu_a),
+           mean_rmse_a = mean(results$rmse_a),
            max_rhat_a = max(results$rhat_a),
-           cor_f = mean(results$re_f),
+           cor_f = fisherz2r(mean(fisherz(results$re_f))),
+           mean_rmse_mu_f = mean(results$rmse_mu_f),
+           mean_rmse_f = mean(results$rmse_f),
            max_rhat_f = max(results$rhat_f),
-           cor_e = mean(results$re_e), 
+           cor_e = fisherz2r(mean(fisherz(results$re_e))), 
+           mean_rmse_mu_e = mean(results$rmse_mu_e),
+           mean_rmse_e = mean(results$rmse_e),
            max_rhat_e = max(results$rhat_e),
-           cor_r = mean(results$re_r),
-           max_rhat_r = max(results$rhat_r))
-           
+           cor_r = fisherz2r(mean(fisherz(results$re_r))),
+           mean_rmse_mu_r = mean(results$rmse_mu_r),
+           mean_rmse_r = mean(results$rmse_r),
+           max_rhat_r = max(results$rhat_r),
+           cor_IIP = fisherz2r(mean(fisherz(results$cor_IIP))),
+           cor_IOP = fisherz2r(mean(fisherz(results$cor_IOP))),
+           cor_DIP = fisherz2r(mean(fisherz(results$cor_DIP))),
+           cor_DIOP = fisherz2r(mean(fisherz(results$cor_DIOP))),
+           cor_NPL = fisherz2r(mean(fisherz(results$cor_NPL))))
           
+  
+  
   ret
   
 }
@@ -324,7 +392,7 @@ SimClean()
 res <- runSimulation(sim3, replications = reps2con, generate = Generate_M3, 
                      analyse = Analyze_M3, summarise = Summarise,
                      fixed_objects = fo, parallel=TRUE, 
-                     packages = c("cmdstanr","posterior","tmvtnorm","psych","tidyverse"),ncores =8)
+                     packages = c("cmdstanr","posterior","tmvtnorm","psych","tidyverse"),ncores =16)
 
 
 SimExtract(res,what = "summarise")

@@ -60,7 +60,7 @@ transformed parameters {
     // Transform f Parameter
     real mu_f = inv_logit(hyper_pars[3]);
     row_vector[N] f = inv_logit(subj_pars[3,]);
-
+    
     // activations
     real acts_IIP[N*Con];
     real acts_IOP[N*Con];
@@ -138,7 +138,7 @@ model {
 generated quantities{
   
   vector[(J*(J-1))%/%2] cor_mat_lower_tri;
-  int count_rep[N,K];
+  int count_rep[N*Con,K];
   
   
   cor_mat_lower_tri = flatten_lower_tri(multiply_lower_tri_self_transpose(L_Omega));
@@ -147,12 +147,13 @@ generated quantities{
   
   
   for (i in 1:N)
+  for(j in 1:Con)
   {
-    
-    count_rep[i,] = multinomial_rng(probs[i,], retrievals);
-    
-    
+    {
+      
+      count_rep[j + (i-1)*Con,] = multinomial_rng(probs[j + (i-1)*Con,], retrievals);
+      
+    }
   }
-  
 }
 
