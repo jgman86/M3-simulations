@@ -93,7 +93,7 @@ stan_fit <- function(mod, dat){
                          init = init,
                          show_messages = FALSE))
   
-  M3 <- M3$summary("hyper_pars", mean)$mean[1:5]
+  M3 <- list(dat$parms,M3$summary(c("hyper_pars","subj_pars"), mean,sd,Mode,HDInterval::hdi))
   
   M3
 }
@@ -209,7 +209,8 @@ Generate_M3 <- function(condition, fixed_objects=NULL) {
               Con = length(unique(data[,"Freetime"])),
               Freetime = unique(data[,"Freetime"]),
               retrievals = Retrievals,
-              scale_b = 0.1)
+              scale_b = 0.1,
+              parms=parms)
   
   dat  
 }
@@ -243,10 +244,10 @@ Summarise <- function(condition, results, fixed_objects=NULL) {
 
 
 SimClean()
-res <- runSimulation(sim3, replications = 1, generate = Generate_M3, 
-                     analyse = Analyze_M3, summarise = Summarise, 
+res <- runSimulation(sim3, replications = 4, generate = Generate_M3, 
+                     analyse = Analyze_M3, 
                      fixed_objects = fo, parallel=TRUE, 
-                     packages = c("cmdstanr","posterior","tmvtnorm","psych"),ncores =32)
+                     packages = c("cmdstanr","posterior","tmvtnorm","psych"),ncores =16)
 
 
 SimExtract(res,what = "summarise")
