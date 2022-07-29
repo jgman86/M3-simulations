@@ -35,8 +35,8 @@ sim3 <- createDesign(OtherItems=N,
                      nFreetime=nFT)
 
 ###### Fixed Simulation Factors ---- 
-SampleSize <- 10
-reps2con <- 2
+SampleSize <- 100
+reps2con <- 10
 minFT <- 0.5
 maxFT <- 2
 
@@ -78,7 +78,7 @@ fo <- list(M3_CS_EE=cmdstan_model(stan_path_M3_EE),
 
 
 ##### Set Up Fitting Function for cmdstan
-stan_fit <- function(mod, dat){
+stan_fit <- function(mod, dat,n_warmup,n_iter,adapt_delta,max_treedepth){
   
   #set_cmdstan_path(path="C:/Coding/cmdstan-2.30.0/")
   
@@ -96,10 +96,10 @@ stan_fit <- function(mod, dat){
                           refresh = 0,
                           chains = 4,
                           #parallel_chains=4, 
-                          iter_warmup=150,
-                          iter_sampling=500,
-                          adapt_delta=.95,
-                          max_treedepth=15,
+                          iter_warmup=n_warmup,
+                          iter_sampling=n_iter,
+                          adapt_delta=adapt_delta,
+                          max_treedepth=max_treedepth,
                           init = init,
                           show_messages = FALSE))
   
@@ -241,7 +241,11 @@ Analyze_M3 <- function(condition,dat,fixed_objects=NULL)
   theta <- dat[[2]]
   data <- dat[[3]]
   
-  fit3 <- stan_fit(fixed_objects$M3_CS_EE, dat[[1]])
+  fit3 <- stan_fit(fixed_objects$M3_CS_EE, dat[[1]],
+                   n_warmup = fixed_objects$n_warmup,
+                   n_iter=fixed_objects$n_iter,
+                   adapt_delta=fixed_objects$adapt_delta,
+                   max_treedepth=fixed_objects$max_treedepth)
   
   #hyper <- as.data.frame(fit3[[1]])
   
@@ -389,8 +393,8 @@ Summarise <- function(condition, results, fixed_objects=NULL) {
 
 
 SimClean()
-res <- runSimulation(sim3, replications = reps2con, generate = Generate_M3, 
-                     analyse = Analyze_M3, summarise = Summarise,
+res <- runSimulation(sim3, replications = 10, generate = Generate_M3, 
+                     analyse = Analyze_M3, summarise = Summarise,filename = "M3_EE.rds",
                      fixed_objects = fo, parallel=TRUE, 
                      packages = c("cmdstanr","posterior","tmvtnorm","psych","tidyverse"),ncores =16)
 
