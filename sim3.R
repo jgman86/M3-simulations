@@ -23,8 +23,8 @@ source("Functions/M3_functions.R")
 #### Define Simulation Design and SetUp Model----
 
 ###### Varying Simulation Factors ---- 
-N <- c(4)
-K <- c(8,16)
+N <- c(5)
+K <- c(16)
 nRetrievals <- c(500)
 nFT<- c(2) # 2,4,10 Conditions between 0.2 and 2
 
@@ -36,9 +36,16 @@ sim3 <- createDesign(OtherItems=N,
 
 ###### Fixed Simulation Factors ---- 
 SampleSize <- 10
-reps2con <- 100
+reps2con <- 2
 minFT <- 0.5
 maxFT <- 2
+
+###### Simulation Options
+n_iter = 2000
+n_warmup= 1000
+adapt_delta = .95
+max_treedepth = 15
+
 
 ###### Model Path #####
 stan_path_M3_EE <- paste0("Models/M3_ComplexSpan_EE_LKJ_Cholesky_NC.stan")
@@ -62,8 +69,11 @@ fo <- list(M3_CS_EE=cmdstan_model(stan_path_M3_EE),
            sigF = c(0.1,0.5),
            sigE = c(1,2),
            sigR = c(0.125,0.5), # abhänbgig von removal parameter -> analog zu c und a
-           sigB = c(0.0001, 0.1)
-           
+           sigB = c(0.0001, 0.1),
+           n_iter = n_iter,
+           n_warmup= n_warmup,
+           adapt_delta = adapt_delta,
+           max_treedepth = max_treedepth
 )
 
 
@@ -93,7 +103,13 @@ stan_fit <- function(mod, dat){
                          init = init,
                          show_messages = FALSE))
   
-  M3 <- list(dat$parms,M3$summary(c("hyper_pars","subj_pars"), mean,sd,Mode,HDInterval::hdi))
+  M3_hyper <- M3$summary(c("hyper_pars","mu_f"), mean,Mode,sd,rhat,HDInterval::hdi)
+  M3_subj <- M3$summary(c("subj_pars"), mean,sd,rhat,Mode,HDInterval::hdi)
+  M3_f <- M3$summary(c("f"), mean,sd,Mode,rhat,HDInterval::hdi)
+  M3_count_rep <- M3$summary(c("count_rep"),mean)
+  M3_omega <- M3$summary("cor_mat_lower_tri",mean)
+  
+  M3 <- list(M3_hyper,M3_subj,M3_f,M3_count_rep,M3_omega)
   
   M3
 }
@@ -119,8 +135,7 @@ Generate_M3 <- function(condition, fixed_objects=NULL) {
   sigR <-fixed_objects$range_muR
   sigB <- fixed_objects$sigB
   
-  
-  
+ 
   # Generate FreeTime Conditions
   
   conFT <- seq(from = minFT, to = maxFT, length.out = nFreetime) # eventuell log scale 0.2 0.8 2.4 oder so?
@@ -201,7 +216,7 @@ Generate_M3 <- function(condition, fixed_objects=NULL) {
   # Generate Stan Data ----
   
   
-  dat <- list(count = data[,4:8], 
+  stan.dat <- list(count = data[,4:8], 
               K = 5,
               R = as.vector(respOpt_Cspan(OtherItems,NPL)),
               J = length(sigs)-1,
@@ -209,10 +224,12 @@ Generate_M3 <- function(condition, fixed_objects=NULL) {
               Con = length(unique(data[,"Freetime"])),
               Freetime = unique(data[,"Freetime"]),
               retrievals = Retrievals,
-              scale_b = 0.1,
-              parms=parms)
+              scale_b = 0.1)
   
-  dat  
+  theta <- parms
+  
+  dat  <- list(stan.dat,theta,data)
+  dat
 }
 
 
@@ -221,9 +238,58 @@ Analyze_M3 <- function(condition,dat,fixed_objects=NULL)
   
   Attach(condition)
   
-  fit3 <- stan_fit(fixed_objects$M3_CS_EE, dat)
+  theta <- dat[[2]]
+  data <- dat[[3]]
   
-  ret <- fit3
+  fit3 <- stan_fit(fixed_objects$M3_CS_EE, dat[[1]])
+  
+  #hyper <- as.data.frame(fit3[[1]])
+  
+  ## Calculate Current Repetitions Row
+  
+  # Merge Data
+  
+  hyper <- fit3[[1]] %>% pivot_wider(.,names_from = "variable",values_from = c("mean","Mode","sd","rhat","upper","lower")) 
+  
+  subj <- fit3[[2]]  %>% mutate(variable = str_remove_all(variable, "subj_pars")) %>% 
+    separate(col = variable,into = c("theta","ID"),sep = ",")  %>% 
+    mutate(ID = str_remove(ID,pattern = "]"), theta = case_when(theta == "[1" ~ "c", theta == "[2" ~ "a",
+                                                                theta == "[3" ~ "log_f",
+                                                                theta == "[4" ~ "EE",
+                                                                theta== "[5" ~ "r")) %>%
+    pivot_wider(.,names_from = "theta",values_from = c("mean","Mode","sd","rhat","upper","lower")) 
+  
+  f <- fit3[[3]] %>% mutate(ID = seq(1:fixed_objects$SampleSize), theta = "f") %>% relocate(c("ID","theta"), .before = variable) %>% select(-variable) %>%
+    pivot_wider(.,names_from = "theta",values_from = c("mean","Mode","sd","rhat","upper","lower"))
+
+  # Recoveries of Subject Pars
+  recoveries_c <- cor(dat[[2]][,"conA"],subj$mean_c)
+  recoveries_a <- cor(dat[[2]][,"genA"],subj$mean_a)
+  recoveries_f <- cor(dat[[2]][,"f"],f$mean_f)
+  recoveries_e <- cor(dat[[2]][,"e"],subj$mean_EE)
+  recoveries_r <- cor(dat[[2]][,"r"],subj$mean_r)
+  
+  
+  # max rhat for subj pars
+  
+  max_rhat_c <- subj %>% select(contains("rhat_c")) %>% max()
+  max_rhat_a <- subj %>% select(contains("rhat_a")) %>% max()
+  max_rhat_f <- f %>% select(contains("rhat_f")) %>% max()
+  max_rhat_e <- subj %>% select(contains("rhat_EE")) %>% max()
+  max_rhat_r <- subj %>% select(contains("rhat_r")) %>% max()
+  
+
+  # Merge Results for current iteration
+  ret <- data.frame(re_c = recoveries_c,
+                    rhat_c = max_rhat_c, 
+                    re_a=recoveries_a,
+                    rhat_a=max_rhat_a,
+                    re_f= recoveries_f,
+                    rhat_f=max_rhat_f,
+                    re_e = recoveries_e,
+                    rhat_e = max_rhat_e,
+                    re_r=recoveries_r,
+                    rhat_r=max_rhat_r)
   
   ret
   
@@ -235,8 +301,19 @@ Analyze_M3 <- function(condition,dat,fixed_objects=NULL)
 
 Summarise <- function(condition, results, fixed_objects=NULL) {
   
-  
-  ret <- c(hyper_mu_c = results[1],hyper_mu_a = results[2], hyper_mu_f = results[3],hyper_mu_e = results[4],hyper_mu_r = results[5])   
+  # Calculate Meta Statistics over all Replications 
+  ret <- c(cor_c = mean(results$re_c),
+           max_rhat_c = max(results$rhat_c),
+           cor_a=mean(results$re_a),
+           max_rhat_a = max(results$rhat_a),
+           cor_f = mean(results$re_f),
+           max_rhat_f = max(results$rhat_f),
+           cor_e = mean(results$re_e), 
+           max_rhat_e = max(results$rhat_e),
+           cor_r = mean(results$re_r),
+           max_rhat_r = max(results$rhat_r))
+           
+          
   ret
   
 }
@@ -244,18 +321,16 @@ Summarise <- function(condition, results, fixed_objects=NULL) {
 
 
 SimClean()
-res <- runSimulation(sim3, replications = 4, generate = Generate_M3, 
-                     analyse = Analyze_M3, 
+res <- runSimulation(sim3, replications = reps2con, generate = Generate_M3, 
+                     analyse = Analyze_M3, summarise = Summarise,
                      fixed_objects = fo, parallel=TRUE, 
-                     packages = c("cmdstanr","posterior","tmvtnorm","psych"),ncores =16)
+                     packages = c("cmdstanr","posterior","tmvtnorm","psych","tidyverse"),ncores =8)
 
 
 SimExtract(res,what = "summarise")
 
 
 stan1.dat<-Generate_M3(sim3[1,],fo)
-
-
 
 
 
