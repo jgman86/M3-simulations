@@ -15,7 +15,8 @@ library(bayesplot)
 #### Set Options ####
 dir_path <- here()
 #cmd_path <- paste0("C:/Coding/cmdstan-2.30.0")
-set_cmdstan_path()
+cmd_path <- paste0("~/R/x86_64-pc-linux-gnu-library/4.1/cmdstan-2.30.0")
+set_cmdstan_path(cmd_path)
 cmdstan_version()
 
 ### Source Functions ####
@@ -35,14 +36,14 @@ sim3 <- createDesign(OtherItems=N,
                      nFreetime=nFT)
 
 ###### Fixed Simulation Factors ---- 
-SampleSize <- 100
-reps2con <- 10
+SampleSize <- 10
+reps2con <- 2
 minFT <- 0.5
 maxFT <- 2
 
 ###### Simulation Options
-n_iter = 2000
-n_warmup= 1000
+n_iter = 500
+n_warmup= 150
 adapt_delta = .95
 max_treedepth = 15
 
@@ -81,6 +82,7 @@ fo <- list(M3_CS_EE=cmdstan_model(stan_path_M3_EE),
 stan_fit <- function(mod, dat,n_warmup,n_iter,adapt_delta,max_treedepth){
   
   #set_cmdstan_path(path="C:/Coding/cmdstan-2.30.0/")
+  set_cmdstan_path(path="~/R/x86_64-pc-linux-gnu-library/4.1/cmdstan-2.30.0")
   
   
   init <- function()
@@ -392,19 +394,10 @@ Summarise <- function(condition, results, fixed_objects=NULL) {
 
 
 
-SimClean()
-res <- runSimulation(sim3, replications = 10, generate = Generate_M3, 
+res <- runSimulation(sim3, replications = reps2con, generate = Generate_M3, 
                      analyse = Analyze_M3, summarise = Summarise,filename = "M3_EE.rds",
-                     fixed_objects = fo, parallel=TRUE, 
-                     packages = c("cmdstanr","posterior","tmvtnorm","psych","tidyverse"),ncores =16)
-
-
-SimExtract(res,what = "summarise")
-
-
-stan1.dat<-Generate_M3(sim3[1,],fo)
-
-
+                     fixed_objects = fo, parallel=TRUE, ncores =  parallel::detectCores(),
+                     packages = c("cmdstanr","posterior","tmvtnorm","psych","tidyverse","tidybayes"))
 
 
 
