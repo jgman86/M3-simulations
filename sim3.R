@@ -1,7 +1,6 @@
 #####M3 Extended Encoding and Updating Simulations########
 
 ### Load Packages ####
-
 library(SimDesign)
 library(cmdstanr)
 library(tidyverse)
@@ -10,14 +9,15 @@ library(psych)
 library(here)
 library(posterior)
 library(tidybayes)
-library(bayesplot)
+library(HDInterval)
+
 
 #### Set Options ####
 dir_path <- here()
 #cmd_path <- paste0("C:/Coding/cmdstan-2.30.0")
 cmd_path <- paste0("~/R/x86_64-pc-linux-gnu-library/4.1/cmdstan-2.30.0")
 set_cmdstan_path(cmd_path)
-cmdstan_version()
+check_cmdstan_toolchain()
 
 ### Source Functions ####
 source("Functions/M3_functions.R")
@@ -26,8 +26,8 @@ source("Functions/M3_functions.R")
 ###### Varying Simulation Factors ---- 
 N <- c(5)
 K <- c(16)
-nRetrievals <- c(500)
-nFT<- c(2) # 2,4,10 Conditions between 0.2 and 2
+nRetrievals <- c(500,1000)
+nFT<- c(4) # 2,4,10 Conditions between 0.2 and 2
 
 ###### Create Simulation Table ---- 
 sim3 <- createDesign(OtherItems=N,
@@ -37,24 +37,24 @@ sim3 <- createDesign(OtherItems=N,
 
 ###### Fixed Simulation Factors ---- 
 SampleSize <- 10
-reps2con <- 2
+reps2con <- 10
 minFT <- 0.5
 maxFT <- 2
 
 ###### Simulation Options
-n_iter = 500
-n_warmup= 150
-adapt_delta = .95
+n_iter = 1500
+n_warmup= 1500
+adapt_delta = .90
 max_treedepth = 15
 
 
 ###### Model Path #####
-stan_path_M3_EE <- paste0("Models/M3_ComplexSpan_EE_LKJ_Cholesky_NC.stan")
+model <- cmdstan_model("Models/M3_ComplexSpan_EE_LKJ_Cholesky_NC.stan")
 #stan_path_M3_Upd <- paste0(dir_path,"/Models/M3_") add upadting model 
 
 
 ###### Compile and store within fixed objects for use in runSimulation() #####
-fo <- list(M3_CS_EE=cmdstan_model(stan_path_M3_EE),
+fo <- list(M3_CS_EE = model,
            SampleSize = SampleSize,
            minFT = minFT,
            maxFT = maxFT,
@@ -79,7 +79,7 @@ fo <- list(M3_CS_EE=cmdstan_model(stan_path_M3_EE),
 
 
 ##### Set Up Fitting Function for cmdstan
-stan_fit <- function(mod, dat,n_warmup,n_iter,adapt_delta,max_treedepth){
+stan_fit <- function(mod,dat,n_warmup,n_iter,adapt_delta,max_treedepth){
   
   #set_cmdstan_path(path="C:/Coding/cmdstan-2.30.0/")
   set_cmdstan_path(path="~/R/x86_64-pc-linux-gnu-library/4.1/cmdstan-2.30.0")
@@ -111,9 +111,11 @@ stan_fit <- function(mod, dat,n_warmup,n_iter,adapt_delta,max_treedepth){
   M3_count_rep <- M3$summary(c("count_rep"),mean)
   M3_omega <- M3$summary("cor_mat_lower_tri",mean)
   
-  M3 <- list(M3_hyper,M3_subj,M3_f,M3_count_rep,M3_omega)
+  M3_sum <- list(M3_hyper,M3_subj,M3_f,M3_count_rep,M3_omega)
+  rm(M3)
+  gc(full = T)
   
-  return(M3)
+  return(M3_sum)
 }
 
 ##### Set Up Simulation Functions for Sim Design ----
@@ -240,16 +242,12 @@ Analyze_M3 <- function(condition,dat,fixed_objects=NULL)
   
   Attach(condition)
   
-  theta <- dat[[2]]
-  data <- dat[[3]]
-  
   fit3 <- stan_fit(fixed_objects$M3_CS_EE, dat[[1]],
                    n_warmup = fixed_objects$n_warmup,
                    n_iter=fixed_objects$n_iter,
                    adapt_delta=fixed_objects$adapt_delta,
                    max_treedepth=fixed_objects$max_treedepth)
   
-  #hyper <- as.data.frame(fit3[[1]])
   
   ## Calculate Current Repetitions Row
   
@@ -350,7 +348,7 @@ Analyze_M3 <- function(condition,dat,fixed_objects=NULL)
   
   ret
   
-  
+  gc(full = T)
   
 }
 
@@ -393,13 +391,9 @@ Summarise <- function(condition, results, fixed_objects=NULL) {
 }
 
 
-
 res <- runSimulation(sim3, replications = reps2con, generate = Generate_M3, 
-                     analyse = Analyze_M3, summarise = Summarise,filename = "M3_EE.rds",
-                     fixed_objects = fo, parallel=TRUE, ncores =  parallel::detectCores(),
+                     analyse = Analyze_M3, summarise = Summarise,parallel = T,
+                     fixed_objects = fo,filename = "M3_EE.rds",
                      packages = c("cmdstanr","posterior","tmvtnorm","psych","tidyverse","tidybayes"))
-
-
-
 
 
