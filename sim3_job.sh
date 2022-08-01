@@ -2,12 +2,12 @@
 
 #SBATCH -J sim3_small            # job name
 #SBATCH -p parallel              # partition: parallel, smp
-#SBATCH -C skylake		 # CPU type: broadwell (40 Kerne), skylake (64 Kerne)
-#SBATCH -c 6
+#SBATCH -C broadwell		 # CPU type: broadwell (40 Kerne), skylake (64 Kerne)
+#SBATCH -c 40
 #SBATCH -A m2_jgu-sim3           # project name
-##SBATCH -N 1                     # e.g. one full node - do not do this, when your script is not using parallel code!
+#SBATCH -N 1                     # e.g. one full node - do not do this, when your script is not using parallel code!
 #SBATCH -n 1                     # Total number of tasks
-#SBATCH -t 00:30:00               # Run time (hh:mm:ss)
+#SBATCH -t 08:00:00               # Run time (hh:mm:ss)
 
 ## Move job to scratch for sufficient space
 JOBDIR="/localscratch/${SLURM_JOB_ID}"

@@ -47,6 +47,8 @@ The following object is masked from ‘package:tidybayes’:
 CmdStan path set to: /home/jgoettma/R/x86_64-pc-linux-gnu-library/4.1/cmdstan-2.30.0
 The C++ toolchain required for CmdStan is setup properly!
 
+Number of parallel clusters in use: 40
+
 Attaching package: ‘mvtnorm’
 
 The following objects are masked from ‘package:SimDesign’:
@@ -61,7 +63,10 @@ The following objects are masked from ‘package:tidyr’:
     expand, pack, unpack
 
 
-Design row: 1/1;   Started: Mon Aug  1 16:55:12 2022;   Total elapsed time: 0.00s 
+Design row: 1/16;   Started: Mon Aug  1 17:52:26 2022;   Total elapsed time: 0.00s 
 
-Simulation complete. Total execution time: 04m 10.16s
+Design row: 2/16;   Started: Mon Aug  1 19:07:04 2022;   Total elapsed time: 01h 14m 37.98s 
 
+Design row: 3/16;   Started: Mon Aug  1 20:10:58 2022;   Total elapsed time: 02h 18m 31.33s 
+
+Design row: 4/16;   Started: Mon Aug  1 21:22:59 2022;   Total elapsed time: 03h 30m 32.30s 

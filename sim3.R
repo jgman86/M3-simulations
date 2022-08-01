@@ -25,9 +25,9 @@ source("Functions/M3_functions.R")
 
 ###### Varying Simulation Factors ---- 
 N <- c(4,5)
-K <- c(16)
+K <- c(8,16)
 nRetrievals <- c(250,500)
-nFT<- c(2) # 2,4,10 Conditions between 0.2 and 2
+nFT<- c(2,4) # 2,4,10 Conditions between 0.2 and 2
 
 ###### Create Simulation Table ---- 
 sim3 <- createDesign(OtherItems=N,
@@ -36,8 +36,8 @@ sim3 <- createDesign(OtherItems=N,
                      nFreetime=nFT)
 
 ###### Fixed Simulation Factors ---- 
-SampleSize <- 10
-reps2con <- 10
+SampleSize <- 100
+reps2con <- 50
 minFT <- 0.5
 maxFT <- 2
 

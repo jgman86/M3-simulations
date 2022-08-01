@@ -64,3 +64,12 @@ The following objects are masked from ‘package:tidyr’:
 
 
 Design row: 1/4;   Started: Mon Aug  1 17:16:15 2022;   Total elapsed time: 0.00s 
+
+Design row: 2/4;   Started: Mon Aug  1 17:21:54 2022;   Total elapsed time: 05m 38.85s 
+
+Design row: 3/4;   Started: Mon Aug  1 17:24:52 2022;   Total elapsed time: 08m 37.23s 
+
+Design row: 4/4;   Started: Mon Aug  1 17:31:13 2022;   Total elapsed time: 14m 57.80s 
+
+Simulation complete. Total execution time: 24m 43.93s
+

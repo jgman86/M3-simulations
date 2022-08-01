@@ -14,8 +14,8 @@ library(doMPI)
 
 #### Set Options ####
 dir_path <- here()
-#cmd_path <- paste0("C:/Coding/cmdstan-2.30.0")
-cmd_path <- paste0("~/R/x86_64-pc-linux-gnu-library/4.1/cmdstan-2.30.0")
+cmd_path <- paste0("C:/Coding/cmdstan-2.30.0")
+#cmd_path <- paste0("~/R/x86_64-pc-linux-gnu-library/4.1/cmdstan-2.30.0")
 set_cmdstan_path(cmd_path)
 check_cmdstan_toolchain()
 
@@ -347,9 +347,8 @@ Analyze_M3 <- function(condition,dat,fixed_objects=NULL)
                     cor_NPL = cor_rep_NPL)
   
   ret
-  
-  gc(full = T)
-  
+ 
+ 
 }
 
 
