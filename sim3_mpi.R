@@ -10,7 +10,7 @@ library(here)
 library(posterior)
 library(tidybayes)
 library(HDInterval)
-
+library(doMPI)
 
 #### Set Options ####
 dir_path <- here()
@@ -24,10 +24,10 @@ source("Functions/M3_functions.R")
 #### Define Simulation Design and SetUp Model----
 
 ###### Varying Simulation Factors ---- 
-N <- c(4,5)
+N <- c(5)
 K <- c(16)
-nRetrievals <- c(250,500)
-nFT<- c(2) # 2,4,10 Conditions between 0.2 and 2
+nRetrievals <- c(500,1000)
+nFT<- c(4) # 2,4,10 Conditions between 0.2 and 2
 
 ###### Create Simulation Table ---- 
 sim3 <- createDesign(OtherItems=N,
@@ -36,8 +36,8 @@ sim3 <- createDesign(OtherItems=N,
                      nFreetime=nFT)
 
 ###### Fixed Simulation Factors ---- 
-SampleSize <- 10
-reps2con <- 10
+SampleSize <- 100
+reps2con <- 50
 minFT <- 0.5
 maxFT <- 2
 
@@ -348,6 +348,7 @@ Analyze_M3 <- function(condition,dat,fixed_objects=NULL)
   
   ret
   
+  gc(full = T)
   
 }
 
@@ -390,10 +391,17 @@ Summarise <- function(condition, results, fixed_objects=NULL) {
 }
 
 
-res <- runSimulation(sim3, replications = reps2con, generate = Generate_M3, 
-                     analyse = Analyze_M3, summarise = Summarise,parallel = T,
-                     fixed_objects = fo,
-                     packages = c("cmdstanr","posterior","tmvtnorm","psych","tidyverse","tidybayes"))
+cl <- startMPIcluster()
+registerDoMPI(cl)
 
-saveRDS(res,"/lustre/miifs01/project/m2_jgu-sim3/M3-simulations/M3_EE.rds")
+res <- runSimulation(sim3, replications = reps2con, generate = Generate_M3, 
+                     analyse = Analyze_M3, summarise = Summarise,
+                     fixed_objects = fo,extra_options=list(MPI=T),
+                     packages = c("SimDesign","cmdstanr","posterior","tmvtnorm","psych","tidyverse","tidybayes"))
+
+closeCluster(cl)
+mpi.quit()
+
+
+saveRDS(res,"/lustre/miifs01/project/m2_jgu-sim3/M3_EE.rds")
 
