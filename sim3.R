@@ -1,6 +1,9 @@
+#!/usr/bin/env Rscript
+
 #####M3 Extended Encoding and Updating Simulations########
 
 ### Load Packages ####
+library(optparse) # to create a command line interface
 library(SimDesign)
 library(cmdstanr)
 library(tidyverse)
@@ -12,22 +15,45 @@ library(tidybayes)
 library(HDInterval)
 
 
-#### Set Options ####
-dir_path <- here()
+#### Read in Condtions for Current Job ####
+
+# Create Option List for simulation conditions
+
+option_list <- list(
+  make_option(c("-N","--OtherItems"), type="integer",
+              help="Number of OtherItems",action = "store",
+              metavar="number"),
+  make_option(c("-K","--NPL"), type="integer",
+              help="Number of NPLs",action = "store",
+              metavar="number"),
+  make_option(c("-F","--nFreetime"), type="integer",
+              help="Number of Freetime Conditions",action = "store",
+              metavar="number"),
+  make_option(c("-R","--nRetrievals"), type="integer", action="store",
+              help="Number of Retrievals",
+              metavar="number")
+  
+)
+
+con <- parse_args(OptionParser(option_list=option_list))
+
+
+
+#### Set Up Cmdstan Interface and external Functions###
 #cmd_path <- paste0("C:/Coding/cmdstan-2.30.0")
 cmd_path <- paste0("~/R/x86_64-pc-linux-gnu-library/4.1/cmdstan-2.30.0")
 set_cmdstan_path(cmd_path)
-check_cmdstan_toolchain()
 
 ### Source Functions ####
 source("Functions/M3_functions.R")
+
 #### Define Simulation Design and SetUp Model----
 
 ###### Varying Simulation Factors ---- 
-N <- c(4,5)
-K <- c(8,16)
-nRetrievals <- c(250,500)
-nFT<- c(2,4) # 2,4,10 Conditions between 0.2 and 2
+N <- con$OtherItems
+K <- con$NPL
+nRetrievals <- con$nRetrieval
+nFT<- con$nFreetime
 
 ###### Create Simulation Table ---- 
 sim3 <- createDesign(OtherItems=N,
