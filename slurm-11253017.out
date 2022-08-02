@@ -72,3 +72,8 @@ The following objects are masked from ‘package:tidyr’:
 Design row: 4/16;   Started: Mon Aug  1 21:22:59 2022;   Total elapsed time: 03h 30m 32.30s 
 
 Design row: 5/16;   Started: Mon Aug  1 22:43:55 2022;   Total elapsed time: 04h 51m 28.76s 
+
+Design row: 6/16;   Started: Tue Aug  2 00:17:55 2022;   Total elapsed time: 06h 25m 28.21s 
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+slurmstepd: error: *** JOB 11253017 ON z0069 CANCELLED AT 2022-08-02T01:52:06 DUE TO TIME LIMIT ***
+slurmstepd: error: *** STEP 11253017.0 ON z0069 CANCELLED AT 2022-08-02T01:52:06 DUE TO TIME LIMIT ***
