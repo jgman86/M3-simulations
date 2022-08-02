@@ -4,7 +4,6 @@ library(optparse) # to create a command line interface
 library(sys) # to infer system environment variables
 library(compiler) # to accelerate using a just in time compiler
 
-options(echo=TRUE)
 
 #we can create a default output directory path, here:
 default.out = paste("/home/", Sys.getenv("USER"), sep="", collapse=NULL)

@@ -1,9 +1,9 @@
 #!/bin/bash
 
 declare -ar nFreetime=(2)
-declare -ar nRetrievals=(100)
+declare -ar nRetrievals=(1000)
 declare -ar OtherItems=(5)
-declare -ar NPL=(1 16)
+declare -ar NPL=(16)
 
 # submit job for every permutation
 # we keep track:
@@ -19,7 +19,7 @@ account=$(sacctmgr -n -s list user $USER format=account%30| grep -v none | head 
            for nFT in "${nFreetime[@]}"; do
               for nRet in "${nRetrievals[@]}"; do
 
-		    jobname="sim3.${N}.${K}.${nFT}.${nRet}"
+		    jobname="sim3_${N}.${K}.${nFT}.${nRet}"
       		    slurmout="Jobs/${jobname}.%j.out"
                     #echo $slurmout
 		    if [[ ! -e ${slurmout} ]]; then

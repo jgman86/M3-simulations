@@ -4,12 +4,16 @@
 #SBATCH -p parallel
 #SBATCH -C broadwell
 #SBATCH -n 1                    
-#SBATCH -c 1
-#SBATCH -t 00:00:20              # Run time (hh:mm:ss)
+#SBATCH -c  8
+#SBATCH -t 00:30:00              # Run time (hh:mm:ss)
+
+
+## Move job to scratch for sufficient space
+JOBDIR="/localscratch/${SLURM_JOB_ID}"
 
 
 module purge # ensures vanilla environment
 module load lang/R # will load most current version of R
 
 # for testing
-srun Rscript --vanilla --no-save --slave  sim_test.R  -N $1 -K $2  -F $3  -R $4 
+srun Rscript sim3.R  -N $1 -K $2  -F $3  -R $4 
