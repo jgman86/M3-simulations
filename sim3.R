@@ -31,6 +31,9 @@ option_list <- list(
               metavar="number"),
   make_option(c("-R","--nRetrievals"), type="integer", action="store",
               help="Number of Retrievals",
+              metavar="number"),
+  make_option(c("-I","--JobID"),type="character", action="store",
+              help="Number of Retrievals",
               metavar="number")
   
 )
@@ -54,6 +57,14 @@ N <- con$OtherItems
 K <- con$NPL
 nRetrievals <- con$nRetrievals
 nFT<- con$nFreetime
+ID <- con$JobID
+
+# Test Correct Argument Passthrough
+# print(N)
+# print(K)
+# print(nRetrievals)
+# print(nFT)
+# print(ID)
 
 ###### Create Simulation Table ----
 sim3 <- createDesign(OtherItems=N,
@@ -62,8 +73,8 @@ sim3 <- createDesign(OtherItems=N,
                      nFreetime=nFT)
 
 ###### Fixed Simulation Factors ----
-SampleSize <- 10
-reps2con <- 2
+SampleSize <- 100
+reps2con <- 100
 minFT <- 0.5
 maxFT <- 2
 
@@ -123,7 +134,7 @@ stan_fit <- function(mod,dat,n_warmup,n_iter,adapt_delta,max_treedepth){
   M3 <-  quiet(mod$sample(dat,
                           refresh = 0,
                           chains = 4,
-                          #parallel_chains=4,
+                          parallel_chains=4,
                           iter_warmup=n_warmup,
                           iter_sampling=n_iter,
                           adapt_delta=adapt_delta,
@@ -139,7 +150,6 @@ stan_fit <- function(mod,dat,n_warmup,n_iter,adapt_delta,max_treedepth){
 
   M3_sum <- list(M3_hyper,M3_subj,M3_f,M3_count_rep,M3_omega)
   rm(M3)
-  gc(full = T)
 
   return(M3_sum)
 }
@@ -257,7 +267,6 @@ Generate_M3 <- function(condition, fixed_objects=NULL) {
                    scale_b = 0.1)
 
   theta <- parms
-
   dat  <- list(stan.dat,theta,data,hyper_mus)
   return(dat)
 }
@@ -319,7 +328,6 @@ Analyze_M3 <- function(condition,dat,fixed_objects=NULL)
   recoveries_e <- cor(dat[[2]][,"e"],subj$mean_EE)
   recoveries_r <- cor(dat[[2]][,"r"],subj$mean_r)
 
-
   # RMSE for subject theta
 
   rmse_c <- RMSE(subj$mean_c,dat[[2]][,"conA"])
@@ -343,7 +351,6 @@ Analyze_M3 <- function(condition,dat,fixed_objects=NULL)
   cor_rep_DIP <- cor(dat[[3]][,"DIP"],count_rep$DIP)
   cor_rep_DIOP <- cor(dat[[3]][,"DOP"],count_rep$DIOP)
   cor_rep_NPL <- cor(dat[[3]][,"NPL"],count_rep$NPL)
-
 
   # Merge Results for current iteration
   ret <- data.frame(re_c = recoveries_c,
@@ -418,7 +425,7 @@ Summarise <- function(condition, results, fixed_objects=NULL) {
 
 runSimulation(sim3, replications = reps2con, generate = Generate_M3,
                      analyse = Analyze_M3, summarise = Summarise,parallel = T,
-                     fixed_objects = fo,filename="M3_EE_CS.rds",
+                     fixed_objects = fo,filename=paste0("M3_EE_CS_",ID),
                      packages = c("cmdstanr","posterior","tmvtnorm","psych","tidyverse","tidybayes"))
 
 #saveRDS(res,"/lustre/miifs01/project/m2_jgu-sim3/M3-simulations/M3_EE.rds")

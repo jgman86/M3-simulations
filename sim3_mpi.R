@@ -13,21 +13,20 @@ library(HDInterval)
 library(doMPI)
 
 #### Set Options ####
-dir_path <- here()
-cmd_path <- paste0("C:/Coding/cmdstan-2.30.0")
-#cmd_path <- paste0("~/R/x86_64-pc-linux-gnu-library/4.1/cmdstan-2.30.0")
+
+#cmd_path <- paste0("C:/Coding/cmdstan-2.30.0")
+cmd_path <- paste0("~/R/x86_64-pc-linux-gnu-library/4.1/cmdstan-2.30.0")
 set_cmdstan_path(cmd_path)
-check_cmdstan_toolchain()
 
 ### Source Functions ####
 source("Functions/M3_functions.R")
 #### Define Simulation Design and SetUp Model----
 
 ###### Varying Simulation Factors ---- 
-N <- c(5)
-K <- c(16)
+N <- c(4,5)
+K <- c(8,16)
 nRetrievals <- c(500,1000)
-nFT<- c(4) # 2,4,10 Conditions between 0.2 and 2
+nFT<- c(2,4) # 2,4,10 Conditions between 0.2 and 2
 
 ###### Create Simulation Table ---- 
 sim3 <- createDesign(OtherItems=N,
@@ -390,13 +389,13 @@ Summarise <- function(condition, results, fixed_objects=NULL) {
 }
 
 
-cl <- startMPIcluster()
+cl <- startMPIcluster(verbose=TRUE)
 registerDoMPI(cl)
 
-res <- runSimulation(sim3, replications = reps2con, generate = Generate_M3, 
-                     analyse = Analyze_M3, summarise = Summarise,
+runSimulation(sim3, replications = reps2con, generate = Generate_M3, 
+                     analyse = Analyze_M3, summarise = Summarise,filename="M3_EE_mpi.rds",
                      fixed_objects = fo,extra_options=list(MPI=T),
-                     packages = c("SimDesign","cmdstanr","posterior","tmvtnorm","psych","tidyverse","tidybayes"))
+                     packages = c("cmdstanr","posterior","tmvtnorm","psych","tidyverse","tidybayes"))
 
 closeCluster(cl)
 mpi.quit()

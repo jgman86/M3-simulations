@@ -1,13 +1,14 @@
 #!/bin/bash
 
-#SBATCH -J sim3_small            # job name
+#SBATCH -J sim3_mpi              # job name
 #SBATCH -p parallel              # partition: parallel, smp
 #SBATCH -C skylake		 # CPU type: broadwell (40 Kerne), skylake (64 Kerne)
 #SBATCH -c 64
 #SBATCH -A m2_jgu-sim3           # project name
-#SBATCH -N 2                     # e.g. one full node - do not do this, when your script is not using parallel code!
-#SBATCH -n 2                     # Total number of tasks
-#SBATCH -t 5:00:00               # Run time (hh:mm:ss)
+#SBATCH -N 2
+#SBATCH -n 2
+##SBATCH --tasks-per-node=2
+#SBATCH -t 18:00:00               # Run time (hh:mm:ss)
 
 JOBDIR="/localscratch/${SLURM_JOB_ID}"
 
@@ -17,10 +18,11 @@ JOBDIR="/localscratch/${SLURM_JOB_ID}"
 
 module purge # ensures vanilla environment
 module load lang/R # will load most current version of R
+module load mpi/OpenMPI/4.1.1-GCC-11.2.0
 
 # do not forget to export OMP_NUM_THREADS, if the library you use, supports this
 # not scale up to 64 threadsq
 #export OMP_NUM_THREADS=64
-                          
-mpirun -np 2 R  --no-save -f sim3_mpi.R
+
+srun  R --no-save --slave -f  sim3_mpi.R
 

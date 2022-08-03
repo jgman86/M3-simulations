@@ -1,9 +1,9 @@
 #!/bin/bash
 
-declare -ar nFreetime=(2)
-declare -ar nRetrievals=(1000)
-declare -ar OtherItems=(5)
-declare -ar NPL=(16)
+declare -ar nFreetime=(2 4)
+declare -ar nRetrievals=(100 250 500 1000)
+declare -ar OtherItems=(1 2 3 4 5)
+declare -ar NPL=(1 2 4 8 16)
 
 # submit job for every permutation
 # we keep track:
@@ -23,7 +23,7 @@ account=$(sacctmgr -n -s list user $USER format=account%30| grep -v none | head 
       		    slurmout="Jobs/${jobname}.%j.out"
                     #echo $slurmout
 		    if [[ ! -e ${slurmout} ]]; then
-        		 sbatch -A "$account" -J "$jobname" -o "$slurmout" sim3_slave.sh "$N" "$K" "$nRet" "$nFT" 
+        		 sbatch -A "$account" -J "$jobname" -o "$slurmout" sim3_slave.sh "$N" "$K" "$nFT" "$nRet" 
         		 njobs=$((njobs + 1))
 
           	     fi
