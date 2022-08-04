@@ -61,3 +61,20 @@ The following objects are masked from ‘package:tidyr’:
 
 
 Design row: 1/1;   Started: Wed Aug  3 17:05:31 2022;   Total elapsed time: 0.00s 
+
+Simulation complete. Total execution time: 03h 52m 26.69s
+
+
+Saving simulation results to file: M3_EE_CS_11261557.rds
+# A tibble: 1 × 34
+  OtherItems   NPL Retriev…¹ nFree…² cor_c max_r…³ mean_…⁴ mean_…⁵ cor_a mean_…⁶
+       <int> <int>     <int>   <int> <dbl>   <dbl>   <dbl>   <dbl> <dbl>   <dbl>
+1          5     1       250       4 0.706    1.53    13.0    17.5 0.720    3.61
+# … with 24 more variables: mean_rmse_a <dbl>, max_rhat_a <dbl>, cor_f <dbl>,
+#   mean_rmse_mu_f <dbl>, mean_rmse_f <dbl>, max_rhat_f <dbl>, cor_e <dbl>,
+#   mean_rmse_mu_e <dbl>, mean_rmse_e <dbl>, max_rhat_e <dbl>, cor_r <dbl>,
+#   mean_rmse_mu_r <dbl>, mean_rmse_r <dbl>, max_rhat_r <dbl>, cor_IIP <dbl>,
+#   cor_IOP <dbl>, cor_DIP <dbl>, cor_DIOP <dbl>, cor_NPL <dbl>,
+#   REPLICATIONS <int>, SIM_TIME <dbl>, COMPLETED <chr>, SEED <int>,
+#   WARNINGS <int>, and abbreviated variable names ¹​Retrievals, ²​nFreetime, …
+# ℹ Use `colnames()` to see all variable names

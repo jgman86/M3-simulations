@@ -61,6 +61,12 @@ transformed parameters {
     real mu_f = inv_logit(hyper_pars[3]);
     row_vector[N] f = inv_logit(subj_pars[3,]);
     
+    // build compound of r and f 
+    real ac[N];
+    
+    for (i in 1:N)
+      ac[i]= f[i] * subj_pars[5,i]; 
+    
     // activations
     real acts_IIP[N*Con];
     real acts_IOP[N*Con];
@@ -72,6 +78,10 @@ transformed parameters {
     // probabilities
     vector[K] probs[N*Con];
     real SummedActs[N*Con];
+    
+ 
+    
+    
     
     
     // loop over subjects and conditions to compute activations and probabilites

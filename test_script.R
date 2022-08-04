@@ -14,7 +14,7 @@ con_nFT =2
 conFT <- seq(from = minFT, to = maxFT, length.out = con_nFT) # eventuell log scale 0.2 0.8 2.4 oder so?
 #conFT <- c(0,0.2,0.4,0.8,1.6)
 # Set Range for Parameter Means
-range_muC <- c(1,100)
+range_muC <- c(1,30)
 range_muA <- c(0,0.5)
 range_muF <- c(0,1) # fix to 0.5
 range_muE <-c(0,0.5)
@@ -77,7 +77,7 @@ omega <- rlkjcorr(1,length(hyper_mus),eta)
 # Little Hack for fixing coveriance of b to zer0
 
 omega[6,1:5] = omega[1:5,6] = 0 #fix cov of b to 0
-omega[3,1:5] = omega[1:5,3] = .00001 #fix cov of f to 0
+#omega[3,1:5] = omega[1:5,3] = .00001 #fix cov of f to 0
 
 
 Sigma <- cor2cov(omega,sigs)
@@ -89,17 +89,19 @@ parms <- tmvtnorm::rtmvnorm(n=SampleSize, mean= hyper_mus, sigma=Sigma,
                             lower=c(0,0,-Inf,0,0,0),upper = c(Inf,Inf,Inf,Inf,Inf,Inf))
 # Merge Parameters to one Matrix
 colnames(parms) <- c("conA","genA","f","e","r","baseA")
-parms[,6] <- 0.1
-parms[,3] <- 0
-parms[,3] <- 1 / (1+exp(-parms[,3]))
 
+parms[,6] <- 0.1
+#parms[,3] <- 0
+parms[,3] <- 1 / (1+exp(-parms[,3]))
+ac <- parms[,3] * parms[,5]
+parms <- cbind(parms,ac)
 #parms[,3] <- 0 if f is fixed to 0.5
 
 
 # Simulate Data for Estimation ----
 
 ParmsFT <- matrix(rep(parms,each =con_nFT), nrow = length(parms[,1])*con_nFT, ncol = ncol(parms), byrow = F)
-colnames(ParmsFT) <- c("conA","genA","f","e","r","baseA")
+colnames(ParmsFT) <- c("conA","genA","f","e","r","baseA","ac")
 FT <- rep(conFT,length.out = nrow(ParmsFT))
 
 data <- simData_CSpanEE(ParmsFT,as.vector(respOpt_Cspan(4,16)),1000,FT)
@@ -116,8 +118,7 @@ stan1.dat <- list(count = data[,4:8],
                  Con = length(unique(data[,"Freetime"])),
                  Freetime = unique(data[,"Freetime"]),
                  retrievals = 1000,
-                 scale_b = 0.1,
-                 parms=parms)
+                 scale_b = 0.1)
 
 
 stan2.dat <- list(count = data[,4:8], 
@@ -133,9 +134,9 @@ stan2.dat <- list(count = data[,4:8],
 
 
 
-M3 <- stan_fit(mod3_norm,dat = stan1.dat)
+M3 <- stan_fit(model,dat = stan1.dat,n_warmup = 1500, n_iter=1500,adapt_delta = .85, max_treedepth = 15)
 
-
+cor(parms[,"ac"],M3[[3]][,2])
 
 # summarise results
 

@@ -61,3 +61,12 @@ The following objects are masked from ‘package:tidyr’:
 
 
 Design row: 1/1;   Started: Wed Aug  3 17:04:50 2022;   Total elapsed time: 0.00s 
+
+Simulation complete. Total execution time: 02h 45m 14.08s
+
+Error in system(paste(which, shQuote(names[i])), intern = TRUE, ignore.stderr = TRUE) : 
+  cannot popen '/usr/bin/which 'pandoc' 2>/dev/null', probable reason 'Cannot allocate memory'
+Calls: runSimulation ... stopifnot -> drop_null -> get_pandoc_version -> Sys.which
+Execution halted
+srun: error: z0519: task 0: Exited with exit code 1
+srun: launch/slurm: _step_signal: Terminating StepId=11261460.0

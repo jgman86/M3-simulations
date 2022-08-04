@@ -4,9 +4,9 @@
 #SBATCH -p parallel
 #SBATCH -C broadwell
 #SBATCH -n 1
-##SBATCH -N 1
-#SBATCH -c 16 
-#SBATCH -t 10:00:00              # Run time (hh:mm:ss)
+#SBATCH -N 1
+#SBATCH -c 24 
+#SBATCH -t 24:00:00              # Run time (hh:mm:ss)
 
 
 ## Move job to scratch for sufficient space

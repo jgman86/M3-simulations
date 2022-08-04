@@ -74,14 +74,14 @@ sim3 <- createDesign(OtherItems=N,
 
 ###### Fixed Simulation Factors ----
 SampleSize <- 100
-reps2con <- 100
+reps2con <- 1
 minFT <- 0.5
 maxFT <- 2
 
 ###### Simulation Options
-n_iter = 1500
+n_iter = 3000
 n_warmup= 1500
-adapt_delta = .90
+adapt_delta = .95
 max_treedepth = 15
 
 
@@ -96,7 +96,7 @@ fo <- list(M3_CS_EE = model,
            minFT = minFT,
            maxFT = maxFT,
            # Set Range for Parameter Means
-           range_muC  =c(1,100),
+           range_muC  =c(1,30),
            range_muA = c(0,0.5),
            range_muF = c(0,1), # fix to 0.5
            range_muE = c(0,0.5),
@@ -145,10 +145,11 @@ stan_fit <- function(mod,dat,n_warmup,n_iter,adapt_delta,max_treedepth){
   M3_hyper <- M3$summary(c("hyper_pars","mu_f"), mean,Mode,sd,rhat,HDInterval::hdi)
   M3_subj <- M3$summary(c("subj_pars"), mean,sd,rhat,Mode,HDInterval::hdi)
   M3_f <- M3$summary(c("f"), mean,sd,Mode,rhat,HDInterval::hdi)
+  M3_ac <- M3$summary(c("ac"), mean,sd,Mode,rhat,HDInterval::hdi)
   M3_count_rep <- M3$summary(c("count_rep"),mean)
   M3_omega <- M3$summary("cor_mat_lower_tri",mean)
 
-  M3_sum <- list(M3_hyper,M3_subj,M3_f,M3_count_rep,M3_omega)
+  M3_sum <- list(M3_hyper,M3_subj,M3_f,M3_ac,M3_count_rep,M3_omega)
   rm(M3)
 
   return(M3_sum)
@@ -240,14 +241,18 @@ Generate_M3 <- function(condition, fixed_objects=NULL) {
   colnames(parms) <- c("conA","genA","f","e","r","baseA")
   parms[,6] <- 0.1
   parms[,3] <- 1 / (1+exp(-parms[,3]))
+  
+ # Create Compound of r and f to counter parameter trade-offs  
+ 
+  ac <- parms[,3] * parms[,5]
+  parms <- cbind(parms, ac)
 
   #parms[,3] <- 0 if f is fixed to 0.5
-
 
   # Simulate Data fixed_objectsr Estimation ----
 
   ParmsFT <- matrix(rep(parms,each =nFreetime), nrow = length(parms[,1])*nFreetime, ncol = ncol(parms), byrow = F)
-  colnames(ParmsFT) <- c("conA","genA","f","e","r","baseA")
+  colnames(ParmsFT) <- c("conA","genA","f","e","r","baseA","ac")
   FT <- rep(conFT,length.out = nrow(ParmsFT))
 
   data <- simData_CSpanEE(ParmsFT,as.vector(respOpt_Cspan(OtherItems,NPL)),Retrievals,FT)
@@ -307,8 +312,10 @@ Analyze_M3 <- function(condition,dat,fixed_objects=NULL)
   f <- fit3[[3]] %>% mutate(ID = seq(1:fixed_objects$SampleSize), theta = "f") %>% relocate(c("ID","theta"), .before = variable) %>% select(-variable) %>%
     pivot_wider(.,names_from = "theta",values_from = c("mean","Mode","sd","rhat","upper","lower"))
 
-
-  count_rep <- fit3[[4]] %>% separate(variable,into = c("ID","Category"),sep = ",") %>%
+  ac <- fit3[[4]] %>% mutate(ID = seq(1:fixed_objects$SampleSize), theta = "ac") %>% relocate(c("ID","theta"), .before = variable) %>% select(-variable) %>%
+    pivot_wider(.,names_from = "theta",values_from = c("mean","Mode","sd","rhat","upper","lower"))
+  
+  count_rep <- fit3[[5]] %>% separate(variable,into = c("ID","Category"),sep = ",") %>%
     mutate(ID= str_remove_all(ID,pattern="count_rep\\["), Category=str_remove_all(Category,"\\]"), mean=round(mean,0)) %>%
     pivot_wider(., names_from = Category, values_from = mean) %>%
     rename("IIP"=`1`,"IOP" = `2`,"DIP" = `3`,"DIOP" = `4`,"NPL" = `5`)
@@ -327,6 +334,7 @@ Analyze_M3 <- function(condition,dat,fixed_objects=NULL)
   recoveries_f <- cor(dat[[2]][,"f"],f$mean_f)
   recoveries_e <- cor(dat[[2]][,"e"],subj$mean_EE)
   recoveries_r <- cor(dat[[2]][,"r"],subj$mean_r)
+  recoveries_ac <- cor(dat[[2]][,"ac"],ac$mean_ac)
 
   # RMSE for subject theta
 
@@ -335,6 +343,7 @@ Analyze_M3 <- function(condition,dat,fixed_objects=NULL)
   rmse_f <- RMSE(f$mean_f,dat[[2]][,"f"])
   rmse_e <- RMSE(subj$mean_EE,dat[[2]][,"e"])
   rmse_r <- RMSE(subj$mean_r,dat[[2]][,"r"])
+  rmse_ac <- RMSE(ac$mean_ac,dat[[2]][,"ac"])
 
   # max rhat for subject theta
 
@@ -373,6 +382,8 @@ Analyze_M3 <- function(condition,dat,fixed_objects=NULL)
                     rmse_r = rmse_r,
                     rmse_mu_r=rmse_mu_r,
                     rhat_r=max_rhat_r,
+                    re_ac=recoveries_ac,
+                    rmse_ac = rmse_ac,
                     cor_IIP = cor_rep_IIP,
                     cor_IOP = cor_rep_IOP,
                     cor_DIP = cor_rep_DIP,
@@ -410,6 +421,8 @@ Summarise <- function(condition, results, fixed_objects=NULL) {
            mean_rmse_mu_r = mean(results$rmse_mu_r),
            mean_rmse_r = mean(results$rmse_r),
            max_rhat_r = max(results$rhat_r),
+           cor_ac = fisherz2r(mean(fisherz(results$re_ac))),
+           mean_rmse_ac = mean(results$rmse_ac),
            cor_IIP = fisherz2r(mean(fisherz(results$cor_IIP))),
            cor_IOP = fisherz2r(mean(fisherz(results$cor_IOP))),
            cor_DIP = fisherz2r(mean(fisherz(results$cor_DIP))),
@@ -425,7 +438,7 @@ Summarise <- function(condition, results, fixed_objects=NULL) {
 
 runSimulation(sim3, replications = reps2con, generate = Generate_M3,
                      analyse = Analyze_M3, summarise = Summarise,parallel = T,
-                     fixed_objects = fo,filename=paste0("M3_EE_CS_",ID),
+                     fixed_objects = fo,filename=paste0("M3_EE_CS_",ID),save_details = list(out_rootdir="Results/Sim2"),
                      packages = c("cmdstanr","posterior","tmvtnorm","psych","tidyverse","tidybayes"))
 
 #saveRDS(res,"/lustre/miifs01/project/m2_jgu-sim3/M3-simulations/M3_EE.rds")
