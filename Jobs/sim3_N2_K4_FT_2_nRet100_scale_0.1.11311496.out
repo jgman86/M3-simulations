@@ -1,0 +1,63 @@
+This is cmdstanr version 0.5.3
+- CmdStanR documentation and vignettes: mc-stan.org/cmdstanr
+- Use set_cmdstan_path() to set the path to CmdStan
+- Use install_cmdstan() to install CmdStan
+── Attaching packages ─────────────────────────────────────── tidyverse 1.3.1 ──
+✔ ggplot2 3.3.6     ✔ purrr   0.3.4
+✔ tibble  3.1.8     ✔ dplyr   1.0.7
+✔ tidyr   1.1.4     ✔ stringr 1.4.0
+✔ readr   2.0.2     ✔ forcats 0.5.1
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+
+Attaching package: ‘data.table’
+
+The following objects are masked from ‘package:dplyr’:
+
+    between, first, last
+
+The following object is masked from ‘package:purrr’:
+
+    transpose
+
+
+Attaching package: ‘psych’
+
+The following objects are masked from ‘package:ggplot2’:
+
+    %+%, alpha
+
+here() starts at /lustre/miifs01/project/m2_jgu-sim3/M3-simulations
+This is posterior version 1.2.2
+
+Attaching package: ‘posterior’
+
+The following objects are masked from ‘package:stats’:
+
+    mad, sd, var
+
+
+Attaching package: ‘HDInterval’
+
+The following object is masked from ‘package:tidybayes’:
+
+    hdi
+
+CmdStan path set to: /home/jgoettma/R/x86_64-pc-linux-gnu-library/4.1/cmdstan-2.30.0
+
+Attaching package: ‘mvtnorm’
+
+The following objects are masked from ‘package:SimDesign’:
+
+    rmvnorm, rmvt
+
+
+Attaching package: ‘Matrix’
+
+The following objects are masked from ‘package:tidyr’:
+
+    expand, pack, unpack
+
+
+Design row: 1/1;   Started: Fri Aug  5 15:06:58 2022;   Total elapsed time: 0.00s 

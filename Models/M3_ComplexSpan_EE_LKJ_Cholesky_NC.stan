@@ -65,7 +65,7 @@ transformed parameters {
     real ac[N];
     
     for (i in 1:N)
-      ac[i]= f[i] * subj_pars[5,i]; 
+      ac[i]= exp(f[i]-1) * subj_pars[5,i]; 
     
     // activations
     real acts_IIP[N*Con];
