@@ -172,8 +172,8 @@ Generate_M3 <- function(condition, fixed_objects=NULL) {
   sigC <- fixed_objects$sigC
   sigA <- fixed_objects$sigA
   sigF <- fixed_objects$sigF
-  sigE <- fixed_objects$range_muE
-  sigR <-fixed_objects$range_muR
+  sigE <- fixed_objects$sigE
+  sigR <-fixed_objects$sigR
   sigB <- fixed_objects$sigB
 
 
