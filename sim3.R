@@ -3,6 +3,7 @@
 #####M3 Extended Encoding and Updating Simulations########
 
 ### Load Packages ####
+suppressPackageStartupMessages({
 library(optparse) # to create a command line interface
 library(SimDesign)
 library(cmdstanr)
@@ -12,7 +13,7 @@ library(psych)
 library(here)
 library(posterior)
 library(tidybayes)
-library(HDInterval)
+library(HDInterval)})
 
 
 #### Read in Condtions for Current Job ####
@@ -32,24 +33,23 @@ option_list <- list(
   make_option(c("-R","--nRetrievals"), type="integer", action="store",
               help="Number of Retrievals",
               metavar="number"),
-  make_option(c("-P","--fixedf"), type="double", action="store",
-              help="Number of Retrievals",
+  make_option(c("-P","--fixedf"), type="integer", action="store",
+              help="fixed f condition",
               metavar="number"),
   make_option(c("-I","--JobID"),type="character", action="store",
-              help="Number of Retrievals",
+              help="Slurm JobID",
+              metavar="number"),
+  make_option(c("-D","--JobDir"),type="character", action="store",
+              help="Slurm JobDir",
               metavar="number")
   
 )
 
 con <- parse_args(OptionParser(option_list=option_list))
 
-#  create a default output directory path, here:
-default.out = paste0("/lustre/miifs01/project/m2_jgu-sim3/M3-simulations/Results/Sim_fullmodel_cs/", collapse = NULL)
-
 #### Set Up Cmdstan Interface and external Functions###
-#cmd_path <- paste0("C:/Coding/cmdstan-2.30.0")
 cmd_path <- paste0("~/R/x86_64-pc-linux-gnu-library/4.1/cmdstan-2.30.0")
-set_cmdstan_path(cmd_path)
+quiet(set_cmdstan_path(cmd_path))
 
 ### Source Functions ####
 source("Functions/M3_functions.R")
@@ -63,6 +63,7 @@ nRetrievals <- con$nRetrievals
 nFT<- con$nFreetime
 ID <- con$JobID
 fixed_f <- con$fixedf
+default.out <- con$JobDir
 
 # Test Correct Argument Passthrough
 # print(N)
@@ -71,13 +72,6 @@ fixed_f <- con$fixedf
 # print(nFT)
 # print(ID)
 # print(fixed_f)
-
-N <- 3
-K <- 8
-nRetrievals <- 500
-nFT <- 2
-ID <- "test"
-fixed_f <- c(0,1)
 
 
 # ###### Create Simulation Table ----
@@ -89,9 +83,9 @@ sim3 <- createDesign(OtherItems=N,
 
 ###### Fixed Simulation Factors ----
 SampleSize <- 100
-reps2con <- 1
-minFT <- 0
-maxFT <- 1.5
+reps2con <- 100
+minFT <- 0.250
+maxFT <- 1.75
 
 ###### Simulation Options
 n_iter = 3000
@@ -117,8 +111,8 @@ fo <- list(M3_CS_EE = full_model,
            range_muC  =c(1,30),
            range_muA = c(0,0.5),
            range_muF = c(0,1), # fix to 0.5
-           range_muE = c(0,0.5),
-           range_muR = c(0,25), # range 0 - 25 empirical derived
+           range_muE = c(0,0.8),
+           range_muR = c(0,20), # range 0 - 25 empirical derived
            eta = 5, # Simulated N = 10000 with eta = 5, 95 % of all values lie within 0 -+ 0.56
            sigC = c(0.125,0.5),
            sigA = c(0.125,0.5),
@@ -134,7 +128,7 @@ fo <- list(M3_CS_EE = full_model,
 
 
 ##### Set Up Fitting Function for cmdstan
-stan_fit <- cmpfun(function(mod,dat,n_warmup,n_iter,adapt_delta,max_treedepth,fixedf){
+stan_fit <- function(mod,dat,n_warmup,n_iter,adapt_delta,max_treedepth,fixedf){
   
   set_cmdstan_path(path="C:/Coding/cmdstan-2.30.0/")
   #set_cmdstan_path(path="~/R/x86_64-pc-linux-gnu-library/4.1/cmdstan-2.30.0")
@@ -180,20 +174,20 @@ stan_fit <- cmpfun(function(mod,dat,n_warmup,n_iter,adapt_delta,max_treedepth,fi
   }
   
   rm(M3)
-  gc(full = T)
+
   return(M3_sum)
-})
+}
 
 ##### Set Up Simulation Functions for Sim Design ----
 
-Generate_M3 <- cmpfun(function(condition, fixed_objects=NULL) {
+Generate_M3 <- function(condition, fixed_objects=NULL) {
   Attach(condition)
   
   SampleSize <- fixed_objects$SampleSize
   minFT <- fixed_objects$minFT
   maxFT <- fixed_objects$maxFT
   range_muC  <- fixed_objects$range_muC
-  range_muA<- fixed_objects$range_muA
+  range_muA <- fixed_objects$range_muA
   range_muF <- fixed_objects$range_muF
   range_muE <- fixed_objects$range_muE
   range_muR <- fixed_objects$range_muR
@@ -342,11 +336,10 @@ Generate_M3 <- cmpfun(function(condition, fixed_objects=NULL) {
   theta <- parms
   dat  <- list(stan.dat,theta,data,hyper_mus)
   return(dat)
-})
+}
 
 
-Analyze_M3 <- cmpfun(function(condition,dat,fixed_objects=NULL)
-{
+Analyze_M3 <- function(condition,dat,fixed_objects=NULL){
   
   Attach(condition)
   
@@ -449,24 +442,30 @@ Analyze_M3 <- cmpfun(function(condition,dat,fixed_objects=NULL)
                       rmse_c = rmse_c,
                       rmse_mu_c=rmse_mu_c,
                       rhat_c = max_rhat_c,
+                      
                       re_a=recoveries_a,
                       rmse_a = rmse_a,
                       rmse_mu_a=rmse_mu_a,
                       rhat_a=max_rhat_a,
+                      
                       re_f= recoveries_f,
                       rmse_f = rmse_f,
                       rmse_mu_f=rmse_mu_f,
                       rhat_f=max_rhat_f,
+                      
                       re_e = recoveries_e,
                       rmse_e = rmse_e,
                       rmse_mu_e=rmse_mu_e,
                       rhat_e = max_rhat_e,
+                      
                       re_r=recoveries_r,
                       rmse_r = rmse_r,
                       rmse_mu_r=rmse_mu_r,
                       rhat_r=max_rhat_r,
+                      
                       re_ac=recoveries_ac,
                       rmse_ac = rmse_ac,
+                      
                       cor_IIP = cor_rep_IIP,
                       cor_IOP = cor_rep_IOP,
                       cor_DIP = cor_rep_DIP,
@@ -568,10 +567,10 @@ Analyze_M3 <- cmpfun(function(condition,dat,fixed_objects=NULL)
   }
   
   
-})
+}
 
 
-Summarise <- cmpfun(function(condition, results, fixed_objects=NULL) {
+Summarise <- function(condition, results, fixed_objects=NULL) {
   Attach(condition)
   
   if (fixedf == 0){
@@ -605,7 +604,7 @@ Summarise <- cmpfun(function(condition, results, fixed_objects=NULL) {
              cor_DIOP = fisherz2r(mean(fisherz(results$cor_DIOP))),
              cor_NPL = fisherz2r(mean(fisherz(results$cor_NPL))))
     
-    return(ret)
+     ret
     
   } else {
     
@@ -632,16 +631,17 @@ Summarise <- cmpfun(function(condition, results, fixed_objects=NULL) {
              cor_DIOP = fisherz2r(mean(fisherz(results$cor_DIOP))),
              cor_NPL = fisherz2r(mean(fisherz(results$cor_NPL))))
     
-    return(ret)
+    ret
     
   } 
   
-})
+}
 
 
 runSimulation(sim3, replications = reps2con, generate = Generate_M3,
               analyse = Analyze_M3, summarise = Summarise,parallel = T,
-              fixed_objects = fo,filename=paste0("M3_EE_CS_FULL_",ID),#save_details = list(out_rootdir=default.out),
+              fixed_objects = fo,filename=paste0("M3_EE_CS_FULL_",ID),
+              save_details = list(out_rootdir=paste0(default.out,"Results/")),
               packages = c("cmdstanr","posterior","tmvtnorm","psych","tidyverse","tidybayes"))
 
 
