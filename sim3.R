@@ -13,7 +13,8 @@ library(psych)
 library(here)
 library(posterior)
 library(tidybayes)
-library(HDInterval)})
+library(HDInterval)
+library(unixtools)})
 
 
 #### Read in Condtions for Current Job ####
@@ -51,6 +52,11 @@ con <- parse_args(OptionParser(option_list=option_list))
 cmd_path <- paste0("~/R/x86_64-pc-linux-gnu-library/4.1/cmdstan-2.30.0")
 quiet(set_cmdstan_path(cmd_path))
 
+ID <- con$JobID
+
+tmp<-paste0("/localscratch/",ID,"/ramdisk")
+set.tempdir(tmp)
+
 ### Source Functions ####
 source("Functions/M3_functions.R")
 
@@ -61,7 +67,7 @@ N <- con$OtherItems
 K <- con$NPL
 nRetrievals <- con$nRetrievals
 nFT<- con$nFreetime
-ID <- con$JobID
+
 fixed_f <- con$fixedf
 default.out <- con$JobDir
 
@@ -88,7 +94,7 @@ minFT <- 0.250
 maxFT <- 1.75
 
 ###### Simulation Options
-n_iter = 3000
+n_iter = 1500
 n_warmup= 1500
 adapt_delta = .90
 max_treedepth = 15
@@ -112,7 +118,7 @@ fo <- list(M3_CS_EE = full_model,
            range_muA = c(0,0.5),
            range_muF = c(0,1), # fix to 0.5
            range_muE = c(0,0.8),
-           range_muR = c(0,20), # range 0 - 25 empirical derived
+           range_muR = c(0,10), # range 0 - 25 empirical derived
            eta = 5, # Simulated N = 10000 with eta = 5, 95 % of all values lie within 0 -+ 0.56
            sigC = c(0.125,0.5),
            sigA = c(0.125,0.5),
@@ -129,10 +135,6 @@ fo <- list(M3_CS_EE = full_model,
 
 ##### Set Up Fitting Function for cmdstan
 stan_fit <- function(mod,dat,n_warmup,n_iter,adapt_delta,max_treedepth,fixedf){
-  
-  set_cmdstan_path(path="C:/Coding/cmdstan-2.30.0/")
-  #set_cmdstan_path(path="~/R/x86_64-pc-linux-gnu-library/4.1/cmdstan-2.30.0")
-  
   
   init <- function()
   {
