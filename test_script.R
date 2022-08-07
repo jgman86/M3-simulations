@@ -9,7 +9,7 @@ nRetrievals <- 500
 minFT <- 0.5
 maxFT <- 1.5
 nFT <- c(2,4) # 2,4,10 Conditions between 0.2 and 2
-SampleSize <- 10
+SampleSize <- 100 
 con_nFT =2
 conFT <- seq(from = minFT, to = maxFT, length.out = con_nFT) # eventuell log scale 0.2 0.8 2.4 oder so?
 #conFT <- c(0,0.2,0.4,0.8,1.6)

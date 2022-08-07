@@ -1,11 +1,11 @@
 #!/bin/bash
 
 #SBATCH -A m2_jgu-sim3		 # Account
-#SBATCH -p parallel 		 # Partition: parallel, smp, bigmem
+#SBATCH -p parallel		 # Partition: parallel, smp, bigmem
 #SBATCH -C skylake 		 # architecture Skylake (64 Cores) or Broadwell (40 Cores)	
 #SBATCH -n 1                     # number of tasks
 #SBATCH -N 1			 # allocate one full node	
-#SBATCH --ramdisk=384G 		 # Reserve sufficient space for job on ramdisk	
+#SBATCH --ramdisk=100G 		 # Reserve sufficient space for job on ramdisk	
 #SBATCH -t 02:30:00              # Run time (hh:mm:ss)
 
 
