@@ -54,7 +54,7 @@ quiet(set_cmdstan_path(cmd_path))
 
 ID <- con$JobID
 
-tmp<-paste0("/localscratch/",ID,"/ramdisk")
+tmp<-paste0("/localscratch/",ID)
 set.tempdir(tmp)
 
 ### Source Functions ####
@@ -67,8 +67,7 @@ N <- con$OtherItems
 K <- con$NPL
 nRetrievals <- con$nRetrievals
 nFT<- con$nFreetime
-
-fixed_f <- con$fixedf
+model_type <- con$model_type
 default.out <- con$JobDir
 
 # Test Correct Argument Passthrough
@@ -85,7 +84,7 @@ sim3 <- createDesign(OtherItems=N,
                      NPL=K,
                      Retrievals = nRetrievals,
                      nFreetime=nFT,
-                     fixedf = fixed_f)
+                     model_type = model_type)
 
 ###### Fixed Simulation Factors ----
 SampleSize <- 100
@@ -94,7 +93,7 @@ minFT <- 0.250
 maxFT <- 1.75
 
 ###### Simulation Options
-n_iter = 1500
+n_iter = 3000
 n_warmup= 1500
 adapt_delta = .90
 max_treedepth = 15
@@ -103,13 +102,14 @@ max_treedepth = 15
 ###### Model Path #####
 full_model <- quiet(cmdstan_model("Models/M3_ComplexSpan_EE_LKJ_Cholesky_NC.stan"))
 fixedf_model <- quiet(cmdstan_model("Models/M3_ComplexSpan_EE_LKJ_Cholesky_NC_fixedf.stan"))
-
+retro_cue_model <- quiet(cmdstan_model("Models/M3_ComplexSpan_EE_LKJ_Cholesky_NC_RC.stan"))
 #stan_path_M3_Upd <- paste0(dir_path,"/Models/M3_") add upadting model
 
 
 ###### Compile and store within fixed objects for use in runSimulation() #####
 fo <- list(M3_CS_EE = full_model,
            M3_CS_EE_fixedf = fixedf_model,
+           M3_CS_EE_RC = retro_cue_model,
            SampleSize = SampleSize,
            minFT = minFT,
            maxFT = maxFT,
@@ -239,7 +239,7 @@ Generate_M3 <- function(condition, fixed_objects=NULL) {
   sig_a <- runif(1, min = sigA[1], max = sigA[2])*Mean_Apar
   
   
-  if(fixedf == 0) {
+  if(model_type == "CS" || "CS_RC") {
     sig_f <- runif(1, min = sigF[1], max= sigF[2])
   } else{
     sig_f <- 0.001
@@ -271,7 +271,7 @@ Generate_M3 <- function(condition, fixed_objects=NULL) {
   # Little Hack fixed_objectsr fixing coveriance of b to zer0
   
   
-  if(fixedf == 0){
+  if(model_type == "CS" || "CS_RC"){
     omega[6,1:5] = omega[1:5,6] = 0 #fix cov of b to 0    
   } else {
     omega[6,1:5] = omega[1:5,6] = 0 #fix cov of b to 0    
@@ -291,7 +291,7 @@ Generate_M3 <- function(condition, fixed_objects=NULL) {
   colnames(parms) <- c("conA","genA","f","e","r","baseA")
   parms[,6] <- 0.1
   
-  if(fixedf == 0){
+  if(model_type == "CS" || "CS_RC"){
     
     parms[,3] <- 1 / (1+exp(-parms[,3]))
     
@@ -300,7 +300,7 @@ Generate_M3 <- function(condition, fixed_objects=NULL) {
     ac <- exp(parms[,3]-1) * parms[,5]
     parms <- cbind(parms, ac)
     
-    
+  ## Add elseif for updating model add fixed f version of RC Model 
   } else {
     parms[,3] <- 0.5 # 0 if f is fixed to 0.5
     
