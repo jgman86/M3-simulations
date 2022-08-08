@@ -54,7 +54,7 @@ quiet(set_cmdstan_path(cmd_path))
 
 ID <- con$JobID
 
-tmp<-paste0("/localscratch/",ID,"/ramdisk")
+tmp<-paste0("/localscratch/",ID)
 set.tempdir(tmp)
 
 ### Source Functions ####
@@ -94,7 +94,7 @@ minFT <- 0.250
 maxFT <- 1.75
 
 ###### Simulation Options
-n_iter = 1500
+n_iter = 3000
 n_warmup= 1500
 adapt_delta = .90
 max_treedepth = 15
