@@ -162,7 +162,7 @@ simData_CSpanEE <- function(parmsMMM,respOpts,nRetrievals,ft){
 }
 
 
-simData_CSpanEE_bestfit <- function(parmsMMM,respOpts,nRetrievals,ft){
+simData_CSpanEE_RC <- function(parmsMMM,respOpts,nRetrievals,ft){
   # extract parms
   
   
