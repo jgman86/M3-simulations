@@ -89,7 +89,7 @@ sim3 <- createDesign(OtherItems=N,
 ###### Fixed Simulation Factors ----
 SampleSize <- 100
 reps2con <- 100
-minFT <- 0.250
+minFT <- 0 # Zero has to be included ...?
 maxFT <- 1.75
 
 ###### Simulation Options
@@ -116,8 +116,10 @@ fo <- list(M3_CS_EE = full_model,
            # Set Range for Parameter Means
            range_muC  =c(1,30),
            range_muA = c(0,0.5),
-           range_muF = c(0,1), # fix to 0.5
+           range_muF = c(0,1), # fix to 0.5 for one model type 
            range_muE = c(0,0.8),
+           range_mu_eU <-c(0.2,0.6),
+           range_muD <- c(0,1),
            range_muR = c(0,10), # range 0 - 25 empirical derived
            eta = 5, # Simulated N = 10000 with eta = 5, 95 % of all values lie within 0 -+ 0.56
            sigC = c(0.125,0.5),
@@ -136,6 +138,7 @@ fo <- list(M3_CS_EE = full_model,
 ##### Set Up Fitting Function for cmdstan
 stan_fit <- function(mod,dat,n_warmup,n_iter,adapt_delta,max_treedepth,fixedf){
   
+  # Add init fuctions for Updating Model
   init <- function()
   {
     list(hyper_pars=cbind(runif(dat$J,10,20)),
@@ -204,33 +207,149 @@ Generate_M3 <- function(condition, fixed_objects=NULL) {
   
   # Generate FreeTime Conditions
   
-  conFT <- seq(from = minFT, to = maxFT, length.out=nFreetime) # eventuell log scale 0.2 0.8 2.4 oder so?
-  
-  
+  if(model_type == "CS_EE" || "CS_EE_fixed" || "CS_EE_RC" ){
+    
+    conFT <- seq(from = minFT, to = maxFT, length.out=nFreetime) # eventuell log scale 0.2 0.8 2.4 oder so?
+    
+  } else if(model_type == "Upd"){
+    
+    conWCI <- seq(from = minTime, to = maxTime, length.out = nFreetime) #other time constraints for updating model ?
+    conCWI <- seq(from = minTime, to = maxTime, length.out = nFreetime) #other time constraints for updating model ?
+    
+  }
+
+  if(model_type == "CS_EE" || "CS_EE_RC" ){
+    
   # Sample Hyper-Parameter Means with C as fixpoint ----
   relCA <- runif(1, min = range_muA[1],max = range_muA[2])
   Mean_Cpar <- runif(1, min =range_muC[1], max= range_muC[2])
   Mean_Apar <- Mean_Cpar*(relCA)
   Mean_Epar <- runif(1, min =range_muE[1], max = range_muE[2])
   Mean_Rpar <- runif(1, min= range_muR[1], max = range_muR[2])
-  
-  
-  if(fixedf == 0){
-    Mean_Fpar <- runif(1, min= range_muF[1], max = range_muF[2])
-    log_mu_f <- log(Mean_Fpar/(1-Mean_Fpar)) 
-    n_theta = 5
-  } else{
-    Mean_Fpar <- 0.5 
-    log_mu_f <- 0
-    n_theta = 4
-  }
-  
-  
+  Mean_Fpar <- runif(1, min= range_muF[1], max = range_muF[2])
+  log_mu_f <- log(Mean_Fpar/(1-Mean_Fpar)) 
   Mean_bpar <- 0.1
+  n_theta = 5
   
   # Make Vector with Hyper Pars
   
-  hyper_mus <- c(Mean_Cpar,Mean_Apar,log_mu_f,Mean_Epar,Mean_Rpar, Mean_bpar)
+  hyper_mus <- c(Mean_Cpar,Mean_Apar,log_mu_f,Mean_Epar,Mean_Rpar,Mean_bpar)
+  
+  # Sample Variances and Set Covariances----
+  
+  sig_c <- runif(1, min = sigC[1], max = sigC[2])*Mean_Cpar
+  sig_a <- runif(1, min = sigA[1], max = sigA[2])*Mean_Apar
+  sig_f <- runif(1, min = sigF[1], max= sigF[2])
+  sig_e <- runif(1, min = sigE[1], max= sigE[2])
+  sig_r <- runif(1, min = sigR[1], max= sigR[2])*Mean_Rpar
+  sig_b <- 0.001
+  
+  # Set Up Variance Matrix
+  sigs <-c(sig_c,sig_a,sig_f,sig_e,sig_r,sig_b)
+  Sig <- diag(length(hyper_mus))
+  
+  Sig[1,1] <- (sig_c)^2
+  Sig[2,2] <- (sig_a)^2
+  Sig[3,3] <- (sig_f)^2
+  Sig[4,4] <- (sig_e)^2
+  Sig[5,5] <- (sig_r)^2
+  Sig[6,6] <- (sig_b)^2
+  
+  
+  # Set Correlations fixed_objects Parameters ----
+  
+  # Sample Covariance Matrix Sigma
+  
+  omega <- rlkjcorr(1,length(hyper_mus),eta)
+  
+  # Little Hack fixed_objectsr fixing coveriance of b to zer0
+  
+  omega[6,1:5] = omega[1:5,6] = 0 #fix cov of b to 0    
+  
+  # Create Covariance Matrix
+  
+  Sigma <- cor2cov(omega,sigs)
+  
+  # Sample Parameters from MVN ----
+  
+  theta <- tmvtnorm::rtmvnorm(n=SampleSize, mean= hyper_mus, sigma=Sigma,
+                              lower=c(0,0,-Inf,0,0,0),upper = c(Inf,Inf,Inf,Inf,Inf,Inf))
+  
+  # Merge Parameters to one Matrix
+  
+  colnames(parms) <- c("conA","genA","f","e","r","baseA")
+  theta[,6] <- 0.1
+  theta[,3] <- 1 / (1+exp(-parms[,3]))
+  
+  # Replicate theta over FT conditions ----
+  
+  thetaFT <- matrix(rep(parms,each = nFreetime), nrow = length(theta[,1])*nFreetime, ncol = ncol(theta), byrow = F)
+  colnames(thetaFT) <- c("conA","genA","f","e","r","baseA")
+  FT <- rep(conFT,length.out = nrow(thetaFT))
+  
+  # Simulate Data from theta ----
+
+  if(model_type == "CS_EE"){
+    
+    data <- simData_CSpanEE(thetaFT,as.vector(respOpt_Cspan(OtherItems,NPL)),Retrievals,FT)
+  
+  } else if(model_type == "CS_EE_RC"){
+    
+    data <- simData_CSpanEE_RC(thetaFT,as.vector(respOpt_Cspan(OtherItems,NPL)),Retrievals,FT)
+
+  }
+  
+  # Generate Stan Data ----
+  
+  stan.dat <- list(count = data[,4:8],
+                   K = 5,
+                   R = as.vector(respOpt_Cspan(OtherItems,NPL)),
+                   J = n_theta,
+                   N = length(unique(data[,"ID"])),
+                   Con = length(unique(data[,"Freetime"])),
+                   Freetime = unique(data[,"Freetime"]),
+                   retrievals = Retrievals,
+                   scale_b = 0.1)
+  
+  
+  
+  dat  <- list(stan.dat,theta,data,hyper_mus)
+  return(dat)
+  
+  
+  } else if (mode_type=="CS_EE_fixed")
+
+  # Sample Hyper-Parameter Means with C as fixpoint ----
+  relCA <- runif(1, min = range_muA[1],max = range_muA[2])
+  Mean_Cpar <- runif(1, min =range_muC[1], max= range_muC[2])
+  Mean_Apar <- Mean_Cpar*(relCA)
+  Mean_Epar <- runif(1, min =range_muE[1], max = range_muE[2])
+  Mean_Rpar <- runif(1, min= range_muR[1], max = range_muR[2])
+  Mean_Fpar <- 0.5
+  log_mu_f <- 0
+  Mean_bpar <- 0.1
+  n_theta = 4
+  
+  # Make Vector with Hyper Pars
+  
+  hyper_mus <- c(Mean_Cpar,Mean_Apar,log_mu_f,Mean_Epar,Mean_Rpar,Mean_bpar)
+  
+} else if (model_type == "Upd") {
+  
+  relCA <- runif(1, min = range_muA[1],max = range_muA[2])
+  Mean_Cpar <- runif(1, min =range_muC[1], max= range_muC[2])
+  Mean_Apar <- Mean_Cpar*(relCA)
+  Mean_Dpar <- runif(1, min =range_muD[1], max = range_muD[2])
+  Mean_EUpar <- runif(1, min =range_mueU[1], max = range_mueU[2]) #add new vars to fixed objects 
+  Mean_Rpar <- runif(1, min= range_muR[1], max = range_muR[2])
+  log_mu_d <- log(Mean_Dpar/(1-Mean_Dpar))
+  Mean_bpar <- 0.1
+  n_theta = 5
+  
+  # Make Vector with Hyper Pars
+  
+  hyper_mus <- c(Mean_Cpar,Mean_Apar,log_mu_d,Mean_EUpar,Mean_Rpar, Mean_bpar)
+  } 
   
   
   # Sample Variances and Set Covariances----
