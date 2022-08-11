@@ -1,9 +1,26 @@
-mod3_norm <- cmdstan_model(stan_path_M3_EE)
-mod_univ_nc <- cmdstan_model("Models/M3_ComplexSpan_EE_nc.stan")
-mod_univ <- cmdstan_model("Models/M3_ComplexSpan_EE.stan")
+suppressPackageStartupMessages({
+  library(optparse) # to create a command line interface
+  library(SimDesign)
+  library(cmdstanr)
+  library(tidyverse)
+  library(data.table)
+  library(psych)
+  library(here)
+  library(posterior)
+  library(tidybayes)
+  library(HDInterval)})
+
+# Set cmdstan path
+cmd_path<-paste0("C:/Coding/cmdstan-2.30.0")
+set_cmdstan_path(path=cmd_path)
+
+# Load Models
+
+
+mod3_EE <- cmdstan_model("Models/M3_ComplexSpan_EE_LKJ_Cholesky_NC.stan")
+mod3_Upd <- cmdstan_model("Models/M3_")
 mod_univ_nc_ff <- cmdstan_model("Models/M3_ComplexSpan_EE_nc_fixedf.stan")
 # Simulate Data for Estimation ----
-
 
 nRetrievals <- 500
 minFT <- 0.5
