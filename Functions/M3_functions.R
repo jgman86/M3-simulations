@@ -276,8 +276,8 @@ simData_UpdatingModel <- function(parmsMMM,respOpts,nRetrievals,CWI,WCI,fixtime,
   
   A_IIP <- baseA + (1+EU*t_EU)*(conA + genA) 
   A_IOP <- baseA + (1+EU*t_EU)*genA
-  A_DIP <- baseA + exp(-rm*t_rm)*d*(1+EU*t_EU)*(conA + genA) 
-  A_DOP <- baseA + exp(-rm*t_rm)*d*(1+EU*t_EU)*genA
+  A_DIP <- baseA + (exp(-rm*t_rm)*d*(1+EU*t_EU)*conA) + (1+EU*t_EU*genA) 
+  A_DOP <- baseA + (1+EU*t_EU)*genA
   A_NPL <- baseA
   
   
@@ -522,11 +522,9 @@ rlkjcorr <- function ( n , K , eta = 1 ) {
 
 
 # Set Initial Values for STAN Sampler for Multivariate Sampling for ComplexSpan Models (Hardcoded soon)----
-init_fun <- function() 
+init_nc <- function()
 {
+  list(hyper_pars=cbind(runif(stan.dat$J,10,20)),
+       subj_pars=cbind(runif(stan.dat$N,1,10)))
   
-  list(subj_pars=cbind(runif(stan.dat$N,1,100),
-                       runif(stan.dat$N,1,100),
-                       runif(stan.dat$N,1,100),
-                       runif(stan.dat$N,1,100)))
 }
