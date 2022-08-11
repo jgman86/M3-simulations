@@ -76,13 +76,11 @@ transformed parameters{
     for (i in 1:N){ // for each subject
     for(j in 1:Con1*Con2) {
       
-      
+      # EE on a and c, removal and deletion on c only fitted best
       acts_IIP[j + (i-1)*Con1*Con2] = scale_b + (1+subj_pars[4,i]*t_eU[j])*(subj_pars[2,i] + subj_pars[1,i]); // Item in Position                      
       acts_IOP[j + (i-1)*Con1*Con2] = scale_b + (1+subj_pars[4,i]*t_eU[j])*subj_pars[2,i];        // Item in Other Position
-      acts_DIP[j + (i-1)*Con1*Con2] = scale_b + exp(-subj_pars[3,i]*t_rm[j])*d[i]*(1+subj_pars[4,i]*t_eU[j])*(subj_pars[2,i]+subj_pars[1,i]);// Old Item in Position
-      acts_DIOP[j + (i-1)*Con1*Con2] = scale_b + exp(-subj_pars[3,i]*t_rm[j])*d[i]*(1+subj_pars[4,i]*t_eU[j])*subj_pars[2,i]; // Old item in other Position
-      
-      
+      acts_DIP[j + (i-1)*Con1*Con2] = scale_b + (exp(-subj_pars[3,i]*t_rm[j])*d[i]*(1+subj_pars[4,i]*t_eU[j])*subj_pars[1,i])+(subj_pars[2,i]*(1+subj_pars[4,i]*t_eU[j]));// Old Item in Position
+      acts_DIOP[j + (i-1)*Con1*Con2] = scale_b + (1+subj_pars[4,i]*t_eU[j])*subj_pars[2,i]; // Old item in other Position
       acts_NPL[j + (i-1)*Con1*Con2] = scale_b; // non presented Lure
       
       SummedActs[j + (i-1)*Con1*Con2] = R[1] * acts_IIP[j + (i-1)*Con1*Con2] + R[2] * acts_IOP[j + (i-1)*Con1*Con2] + R[3] * acts_DIP[j + (i-1)*Con1*Con2]+
@@ -146,14 +144,14 @@ generated quantities{
   
   
   
-  
+
   for (i in 1:N)
   for(j in 1:Con1*Con2)
   {
     {
-      
+
       count_rep[j + (i-1)*Con1*Con2,] = multinomial_rng(probs[j + (i-1)*Con1*Con2,], retrievals);
-      
+
     }
   }
 }
