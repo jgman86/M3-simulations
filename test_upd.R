@@ -26,13 +26,16 @@ SampleSize = 100
 N <- 5
 K <- 16
 nFT <- 4
-nRetrievals <- 1000
+nRetrievals <- 500
 
 # Timing Conditions
-fixtime <- 0.25
+fixtime <- 0.2
 enctime <- 0.5
-minTime <- 0.25
-maxTime <- 1.75
+minTime <- 0.1
+maxTime <- 1.1
+
+conWCI <- seq(from = minTime, to = maxTime, length.out = nFT)
+conCWI <- seq(from = minTime, to = maxTime, length.out = nFT)
 
 
 # Set Range for Parameter Means
@@ -53,8 +56,6 @@ sigB <- c(0.0001, 0.1)
 
 # Create Test Data 
 
-conWCI <- seq(from = minTime, to = maxTime, length.out = nFT)
-conCWI <- seq(from = minTime, to = maxTime, length.out = nFT)
 
 
 relCA <- runif(1, min = range_muA[1],max = range_muA[2])
@@ -118,12 +119,92 @@ ParmsUpd <- matrix(rep(parms,each = length(conCWI)*length(conWCI)), nrow = nrow(
 
 colnames(ParmsUpd) <- c("conA","genA","d","eU","r","baseA")
 
-WordCue <- rep(conWCI,length.out = nrow(parms))
-CueWord <-  rep(conCWI,length.out = nrow(parms))
-fix <- rep(fixtime, length.out = nrow(parms))
-enc <- rep(enctime, length.out = nrow(parms))
+# WordCue <- rep(conWCI,length.out = nrow(parms))
+# CueWord <-  rep(conCWI,length.out = nrow(parms))
+# fix <- rep(fixtime, length.out = nrow(parms))
+# enc <- rep(enctime, length.out = nrow(parms))
+t_EU <- conWCI + fixtime + conCWI
+t_rm <- fixtime + conCWI + enctime + conWCI
 
-data <- simData_UpdatingModel(ParmsUpd,as.vector(respOpt_Cspan(N,K)),nRetrievals,conCWI,conWCI,fixtime,enctime)
+simData_UpdatingModel_test <- function(parmsMMM,respOpts,nRetrievals,CWI,WCI,fixtime,enctime){
+  # extract parms
+  
+  
+  if(is.vector(parmsMMM)){
+    conA <- parmsMMM["conA"]
+    genA <- parmsMMM["genA"]
+    EU <- parmsMMM["eU"]
+    rm <- parmsMMM["r"]
+    d <- parmsMMM["d"]
+    baseA <- parmsMMM["baseA"]
+    
+  }else{
+    conA <- parmsMMM[,"conA"]
+    genA <- parmsMMM[,"genA"]
+    EU <- parmsMMM[,"eU"]
+    rm <- parmsMMM[,"r"]
+    d <- parmsMMM[,"d"]
+    baseA <- parmsMMM[,"baseA"]
+  }
+  
+  Cons <- length(unique(CWI))*length(unique(WCI))
+  
+  # Compute Extended Updating and Removal Time
+  t_EU <- WCI + fixtime + CWI
+  t_rm <- fixtime + CWI + enctime + WCI
+  
+  # compute acts for response categories
+  
+  A_IIP <- baseA + (1+EU*t_EU)*(conA + genA) 
+  A_IOP <- baseA + (1+EU*t_EU)*genA
+  A_DIP <- baseA + (exp(-rm*t_rm)*d*(1+EU*t_EU)*conA) + (1+EU*t_EU)*genA 
+  A_DOP <- baseA + (1+EU*t_EU)*genA
+  A_NPL <- baseA
+  
+  
+  # summarize activations
+  if(length(A_IIP) != 1){
+    acts <- cbind(A_IIP,A_IOP,A_DIP,A_DOP,A_NPL)
+  }else{
+    acts <- c(A_IIP,A_IOP,A_DIP,A_DOP,A_NPL)
+  }
+  
+  # compute summed activation
+  sumActs <- apply(t(respOpts*t(acts)),1,sum)
+  
+  Probs <- t(respOpts*t(acts))/sumActs
+  
+  colnames(Probs) <- c("P_IIP","P_IOP","P_DIP","P_DOP","P_NPL")
+  
+  simdata <- matrix(NA,ncol = ncol(Probs),nrow = nrow(Probs))
+  ID <- matrix(NA, ncol=1, nrow=nrow(Probs))
+  i <- 1
+  
+  for(id in 1:nrow(Probs)){
+    
+    simdata[id,] <- t(stats::rmultinom(1,nRetrievals,Probs[id,]))
+    
+    
+    ID[id,] <- i
+    
+    if (id %% Cons == 0)
+    {
+      
+      i <- i+1
+      
+    }
+    
+    
+  }
+  
+  
+  time <- crossing(t_rm,t_EU)
+  time<-as.matrix(do.call(rbind, replicate(length(unique(ID)), time, simplify=FALSE)))
+  data <- cbind(ID,simdata,time)
+  colnames(data) <- c("ID","IIP","IOP","DIP","DOP","NPL","t_rm","t_EU")
+  return(data)
+}
+data <- simData_UpdatingModel_test(ParmsUpd,as.vector(respOpt_Cspan(N,K)),nRetrievals,conCWI,conWCI,fixtime,enctime)
 
 # Create Stan Data 
 stan.dat <- list(count = data[,2:6], 
@@ -131,15 +212,15 @@ stan.dat <- list(count = data[,2:6],
                  R = as.vector(respOpt_Cspan(N,K)),
                  J = length(sigs)-1,
                  N = length(unique(data[,"ID"])),
-                 Con1 = length(unique(data[,"t_EU"])),
-                 Con2 = length(unique(data[,"t_rm"])),
+                 Con1 = nFT,
+                 Con2 = nFT,
                  t_eU = data[,"t_EU"],
                  t_rm = data[,"t_rm"],
                  retrievals = nRetrievals,
                  scale_b = 0.1)
 
 
-m3_upd <- m3_upd$sample(stan.dat,chains=4,
+upd_fit <- m3_upd$sample(stan.dat,chains=4,
                         parallel_chains = 4,
                         iter_sampling =1500,
                         iter_warmup=1500,
@@ -149,7 +230,7 @@ m3_upd <- m3_upd$sample(stan.dat,chains=4,
                         init=init_nc)
 
 # Plot some subj theta results
-mcmc_combo(m3_upd$draws(c("subj_pars[1,3]","subj_pars[2,3]","subj_pars[4,3]","subj_pars[5,3]","f[3]")))
+mcmc_combo(upd_fit$draws(c("subj_pars[1,3]","subj_pars[2,3]","subj_pars[4,3]","subj_pars[5,3]","d[3]")))
 # Plot hyper pars
-mcmc_combo(m3_upd$draws(c("hyper_pars","mu_d")))
+mcmc_combo(upd_fit$draws(c("hyper_pars","mu_d")))
 
