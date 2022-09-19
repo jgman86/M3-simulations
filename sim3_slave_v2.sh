@@ -9,10 +9,6 @@
 #SBATCH -t 10:00:00              # Run time (hh:mm:ss)
 
 
-declare N=3
-declare 
-
-
 ## Default Output 
 WD="/lustre/miifs01/project/m2_jgu-sim3/M3-simulations/"
 
