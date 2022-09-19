@@ -1,9 +1,9 @@
 #!/bin/bash
 
-declare -ar nFreetime=(2)
-declare -ar nRetrievals=(250)
-declare -ar OtherItems=(4)
-declare -ar NPL=(4)
+declare -ar nFreetime=(2 4)
+declare -ar nRetrievals=(100 250 500 1000 )
+declare -ar OtherItems=(1 2 3 4 5)
+declare -ar NPL=(1 2 4 8 16)
 
 # submit job for every permutation
 # we keep track:
