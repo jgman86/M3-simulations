@@ -12,8 +12,8 @@ suppressPackageStartupMessages({
   library(bayesplot)})
 
 # Set cmdstan path
-cmd_path<-paste0("C:/Coding/cmdstan-2.30.0")
-set_cmdstan_path(path=cmd_path)
+#cmd_path<-paste0("C:/Coding/cmdstan-2.30.0")
+#set_cmdstan_path(path=cmd_path)
 
 m3_upd <- cmdstan_model("Models/M3_Updating_LKJ_NC.stan")
 
@@ -25,14 +25,14 @@ source("Functions/M3_functions.R")
 SampleSize = 100
 N <- 5
 K <- 16
-nFT <- 4
-nRetrievals <- 500
+nFT <-3
+nRetrievals <- 1000
 
 # Timing Conditions
 fixtime <- 0.2
 enctime <- 0.5
 minTime <- 0.1
-maxTime <- 1.1
+maxTime <- 0.8
 
 conWCI <- seq(from = minTime, to = maxTime, length.out = nFT)
 conCWI <- seq(from = minTime, to = maxTime, length.out = nFT)
@@ -41,9 +41,9 @@ conCWI <- seq(from = minTime, to = maxTime, length.out = nFT)
 # Set Range for Parameter Means
 range_muC <- c(1,10)
 range_muA <- c(0,0.5)
-range_muD <- c(0.5,1)
-range_mueU <-c(0.2,0.6)
-range_muR <- c(0,10)
+range_muD <- c(0,0.8)
+range_mueU <-c(0,5)
+range_muR <- c(0.2,0.8)
 eta <- 5 # Simulated N = 10000 with eta = 5, 95 % of all values lie witin 0 -+ 0.56
 
 
@@ -51,7 +51,7 @@ sigC <- c(0.125,0.5)
 sigA <- c(0.125,0.5)
 sigD<- c(0.2,0.8)
 sigE <- c(1,3)
-sigR <- c(0,1.5)
+sigR <- c(0,5)
 sigB <- c(0.0001, 0.1)
 
 # Create Test Data 
@@ -115,7 +115,9 @@ parms[,3] <- 1 / (1+exp(-parms[,3]))
 parms[,6] <- 0.1
 
 # Simulate Data 
-ParmsUpd <- matrix(rep(parms,each = length(conCWI)*length(conWCI)), nrow = nrow(parms)*length(conCWI)*length(conWCI), ncol = ncol(parms), byrow = F)
+ParmsUpd <- matrix(rep(parms,each = length(conCWI)*length(conWCI)), 
+                   nrow = nrow(parms)*length(conCWI)*length(conWCI), 
+                   ncol = ncol(parms), byrow = F)
 
 colnames(ParmsUpd) <- c("conA","genA","d","eU","r","baseA")
 
@@ -199,7 +201,7 @@ simData_UpdatingModel_test <- function(parmsMMM,respOpts,nRetrievals,CWI,WCI,fix
   
   
   time <- crossing(t_rm,t_EU)
-  time<-as.matrix(do.call(rbind, replicate(length(unique(ID)), time, simplify=FALSE)))
+  time <- as.matrix(do.call(rbind, replicate(length(unique(ID)), time, simplify=FALSE)))
   data <- cbind(ID,simdata,time)
   colnames(data) <- c("ID","IIP","IOP","DIP","DOP","NPL","t_rm","t_EU")
   return(data)
@@ -221,16 +223,18 @@ stan.dat <- list(count = data[,2:6],
 
 
 upd_fit <- m3_upd$sample(stan.dat,chains=4,
-                        parallel_chains = 4,
-                        iter_sampling =1500,
-                        iter_warmup=1500,
-                        show_messages = F,
-                        #adapt_delta=0.95,
-                        max_treedepth = 15,
-                        init=init_nc)
+                         parallel_chains = 4,
+                         iter_sampling =1500,
+                         iter_warmup=1500,
+                         show_messages = F,
+                         #adapt_delta=0.95,
+                         max_treedepth = 15,
+                         init=init_nc)
 
 # Plot some subj theta results
 mcmc_combo(upd_fit$draws(c("subj_pars[1,3]","subj_pars[2,3]","subj_pars[4,3]","subj_pars[5,3]","d[3]")))
 # Plot hyper pars
 mcmc_combo(upd_fit$draws(c("hyper_pars","mu_d")))
 
+
+hyper <- upd_fit$summary(c("mu_d","hyper_pars"), mean, rhat) 
