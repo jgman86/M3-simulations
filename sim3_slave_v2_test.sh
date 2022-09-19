@@ -2,12 +2,12 @@
 
 #SBATCH -A m2_jgu-sim3		 # Account
 #SBATCH -p parallel		 # Partition: parallel, smp, bigmem
-##SBATCH -C skylake 		 # architecture Skylake (64 Cores) or Broadwell (40 Cores)	
-#SBATCH -c 1
+#SBATCH -C skylake 		 # architecture Skylake (64 Cores) or Broadwell (40 Cores)	
+##SBATCH -c 16
 #SBATCH -n 1                     # number of tasks
-##SBATCH -N 1
-##SBATCH --mem 200G
-#SBATCH -t 00:0:30              # Run time (hh:mm:ss)
+#SBATCH -N 1
+#SBATCH --mem 200G
+#SBATCH -t 05:00:00              # Run time (hh:mm:ss)
 
 
 ## Default Output 

@@ -28,17 +28,20 @@ set_cmdstan_path(path=cmd_path)
 # Load Models
 mod3_EE <- cmdstan_model("Models/M3_ComplexSpan_EE_LKJ_Cholesky_NC.stan")
 mod_univ_nc_ff <- cmdstan_model("Models/M3_ComplexSpan_EE_nc_fixedf.stan")
+m3_dir <- cmdstan_model("Models/M3_ComplexSpan_EE_dirichlet.stan")
+
 
 # Simulate Data for Estimation ----
 
-nRetrievals <- 500
-minFT <- 0.2
-maxFT <- 1
-nFT <- c(2,4) # 2,4,10 Conditions between 0.2 and 2
-SampleSize <- 100 
-con_nFT =4
+nRetrievals <- 1000
+N <- 4
+K <- 16
+minFT <- 0.5
+maxFT <- 1.5
+nFT <- 4 # 2,4,10 Conditions between 0.2 and 2
+SampleSize <- 100
 #conFT <- seq(from = minFT, to = maxFT, length.out = con_nFT) # eventuell log scale 0.2 0.8 2.4 oder so?
-conFT <- c(0,0.2,0.4,0.8)
+conFT <- c(0,0.1,0.3,0.5)
 # Set Range for Parameter Means
 range_muC <- c(1,30)
 range_muA <- c(0,0.5)
@@ -60,7 +63,7 @@ relCA <- runif(1, min = range_muA[1],max = range_muA[2])
 Mean_Cpar <- 8
 Mean_Apar <- 4
 Mean_Epar <- 0.4
-Mean_Rpar <- 25
+Mean_Rpar <- 15
 Mean_Fpar <-  0.6
 log_mu_f <- log(Mean_Fpar/(1-Mean_Fpar))
 Mean_bpar <- 0.1
@@ -120,28 +123,29 @@ parms[,3] <- 1 / (1+exp(-parms[,3]))
 
 # Simulate Data for Estimation ----
 
-ParmsFT <- matrix(rep(parms,each =con_nFT), nrow = length(parms[,1])*con_nFT, ncol = ncol(parms), byrow = F)
+ParmsFT <- matrix(rep(parms,each =nFT), nrow = length(parms[,1])*nFT, ncol = ncol(parms), byrow = F)
 colnames(ParmsFT) <- c("conA","genA","f","e","r","baseA")
 FT <- rep(conFT,length.out = nrow(ParmsFT))
 
-data <- simData_CSpanEE(ParmsFT,as.vector(respOpt_Cspan(4,16)),1000,FT)
+data <- simData_CSpanEE(ParmsFT,as.vector(respOpt_Cspan(N,K)),nRetrievals,FT)
+p_data <- data[,4:8] /nRetrievals
 
 
 # Generate Stan Data ----
 
 
-stan1.dat <- list(count = data[,4:8], 
+stan1.dat <- list(count = data[,4], 
                  K = 5,
-                 R = as.vector(respOpt_Cspan(4,16)),
+                 R = as.vector(respOpt_Cspan(N,K)),
                  J = length(sigs)-1,
                  N = length(unique(data[,"ID"])),
                  Con = length(unique(data[,"Freetime"])),
                  Freetime = unique(data[,"Freetime"]),
-                 retrievals = 1000,
+                 retrievals = nRetrievals,
                  scale_b = 0.1)
 
 
-fit <- mod3_EE$sample(stan1.dat,refresh = 100,
+fit <- mod3_EE$sample(stan1.dat,refresh = 250,
                       init = init,
                       chains = 4,
                       parallel_chains = 4,
@@ -149,6 +153,8 @@ fit <- mod3_EE$sample(stan1.dat,refresh = 100,
                       iter_warmup = 1500,
                       show_messages = F)
 
+# Plot Posteriors
+mcmc_combo(fit$draws(c("hyper_pars","mu_f")))
 
 
 # summarise results
@@ -180,7 +186,6 @@ max_rhat_a <- subj %>% select(contains("rhat_a")) %>% max()
 max_rhat_f <- subj %>% select(contains("rhat_f")) %>% max()
 max_rhat_e <- subj %>% select(contains("rhat_e")) %>% max()
 max_rhat_r <- subj %>% select(contains("rhat_r")) %>% max()
-
 
 
 
