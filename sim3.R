@@ -34,9 +34,6 @@ option_list <- list(
   make_option(c("-R","--nRetrievals"), type="integer", action="store",
               help="Number of Retrievals",
               metavar="number"),
-  make_option(c("-P","--fixedf"), type="integer", action="store",
-              help="fixed f condition",
-              metavar="number"),
   make_option(c("-I","--JobID"),type="character", action="store",
               help="Slurm JobID",
               metavar="number"),
@@ -68,7 +65,7 @@ K <- con$NPL
 nRetrievals <- con$nRetrievals
 nFT<- con$nFreetime
 
-fixed_f <- con$fixedf
+fixed_f <- c(0,1)
 default.out <- con$JobDir
 
 # Test Correct Argument Passthrough
@@ -90,11 +87,11 @@ sim3 <- createDesign(OtherItems=N,
 ###### Fixed Simulation Factors ----
 SampleSize <- 100
 reps2con <- 100
-minFT <- 0.250
-maxFT <- 1.75
+minFT <- 0
+maxFT <- 1
 
 ###### Simulation Options
-n_iter = 3000
+n_iter = 1500
 n_warmup= 1500
 adapt_delta = .90
 max_treedepth = 15
@@ -118,7 +115,7 @@ fo <- list(M3_CS_EE = full_model,
            range_muA = c(0,0.5),
            range_muF = c(0,1), # fix to 0.5
            range_muE = c(0,0.8),
-           range_muR = c(0,10), # range 0 - 25 empirical derived
+           range_muR = c(0,20), # range 0 - 20 approx HDI of Oberauer et al.
            eta = 5, # Simulated N = 10000 with eta = 5, 95 % of all values lie within 0 -+ 0.56
            sigC = c(0.125,0.5),
            sigA = c(0.125,0.5),
@@ -204,7 +201,16 @@ Generate_M3 <- function(condition, fixed_objects=NULL) {
   
   # Generate FreeTime Conditions
   
-  conFT <- seq(from = minFT, to = maxFT, length.out=nFreetime) # eventuell log scale 0.2 0.8 2.4 oder so?
+  if(nFreetime == 2){
+    
+    conFT <- c(0,0.8)
+    
+  } else{
+    
+    conFT <- c(0,0.4,0.8,1.6)
+  }
+  
+  #conFT <- seq(from = minFT, to = maxFT, length.out=nFreetime) # eventuell log scale 0.2 0.8 2.4 oder so?
   
   
   # Sample Hyper-Parameter Means with C as fixpoint ----
