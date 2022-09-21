@@ -55,8 +55,8 @@ transformed parameters{
     ) ;
     
     // Transform d Parameter
-    real mu_d = inv_logit(hyper_pars[5]);
-    row_vector[N] d = inv_logit(subj_pars[5,]);
+    real mu_d = inv_logit(hyper_pars[3]);
+    row_vector[N] d = inv_logit(subj_pars[3,]);
 
     // Activations
     array[N*Con1*Con2] real acts_IIP;
@@ -78,7 +78,7 @@ transformed parameters{
       // EE on a and c, removal and deletion on c only fitted best
       acts_IIP[j + (i-1)*Con1*Con2] = 0.1 + (1+subj_pars[4,i]*t_eU[j])*(subj_pars[2,i] + subj_pars[1,i]); // Item in Position                      
       acts_IOP[j + (i-1)*Con1*Con2] = 0.1 + (1+subj_pars[4,i]*t_eU[j])*subj_pars[2,i];        // Item in Other Position
-      acts_OIP[j + (i-1)*Con1*Con2] = 0.1 + (exp(-subj_pars[3,i]*t_rm[j])*d[i]*(1+subj_pars[4,i]*t_eU[j])*subj_pars[1,i])+(subj_pars[2,i]*(1+subj_pars[4,i]*t_eU[j]));// Old Item in Position
+      acts_OIP[j + (i-1)*Con1*Con2] = 0.1 + (exp(-subj_pars[5,i]*t_rm[j])*d[i]*(1+subj_pars[4,i]*t_eU[j])*subj_pars[1,i])+(subj_pars[2,i]*(1+subj_pars[4,i]*t_eU[j]));// Old Item in Position
       acts_OO[j + (i-1)*Con1*Con2] = 0.1 + (1+subj_pars[4,i]*t_eU[j])*subj_pars[2,i]; // Old item in other Position
       acts_NPL[j + (i-1)*Con1*Con2] = 0.1; // non presented Lure
       
@@ -100,9 +100,9 @@ model {
   // priors for hyper parameters
   hyper_pars[1] ~ normal(20,10); // c
   hyper_pars[2] ~ normal(2,10); // a
-  hyper_pars[3] ~ normal(1,10); // r
+  hyper_pars[3] ~ normal(0,10); // d
   hyper_pars[4] ~ normal(1,10); // EU
-  hyper_pars[5] ~ normal(0,10); // d
+  hyper_pars[5] ~ normal(0,10); // r
   
   
   //  Prior for correlation matrix and sigma
