@@ -22,10 +22,10 @@ m3_upd <- cmdstan_model("Models/M3_Updating_LKJ_NC.stan")
 source("Functions/M3_functions.R")
 
 # Sim Conditions
-SampleSize = 100
+SampleSize = 50
 N <- 5
 K <- 16
-nFT <-3
+nFT <-2
 nRetrievals <- 1000
 
 # Timing Conditions
@@ -107,7 +107,10 @@ Sigma <- cor2cov(omega,sigs)
 # Sample Parameters from MVN ----
 
 parms <- tmvtnorm::rtmvnorm(n=SampleSize, mean= hyper_mus, sigma=Sigma,
-                            lower=c(0,0,-Inf,0,0,0),upper = c(Inf,Inf,Inf,Inf,Inf,Inf))
+                            lower=c(0,0,-Inf,0,0,0),
+                            upper = c(Inf,Inf,Inf,Inf,Inf,Inf))
+
+
 # Merge Parameters to one Matrix
 colnames(parms) <- c("conA","genA","d","eU","r","baseA")
 parms[,3] <- 1 / (1+exp(-parms[,3]))
@@ -155,26 +158,44 @@ simData_UpdatingModel_test <- function(parmsMMM,respOpts,nRetrievals,CWI,WCI,fix
   t_EU <- WCI + fixtime + CWI
   t_rm <- fixtime + CWI + enctime + WCI
   
-  # compute acts for response categories
+  Con1 <- length(t_EU)
+  Con2 <- length(t_rm)
   
-  A_IIP <- baseA + (1+EU*t_EU)*(conA + genA) 
-  A_IOP <- baseA + (1+EU*t_EU)*genA
-  A_DIP <- baseA + (exp(-rm*t_rm)*d*(1+EU*t_EU)*conA) + (1+EU*t_EU)*genA 
-  A_DOP <- baseA + (1+EU*t_EU)*genA
-  A_NPL <- baseA
+  acts <- matrix(NaN, ncol = 7,nrow =nrow(parmsMMM)*Cons)
   
+  c <- 1
+  
+  for(j in 1:nrow(parmsMMM))
+    for (i in 1:Con1)
+      for(k in 1:Con2)
+        
+      {
+        
+        acts[c,1] <- 0.1 + (1+EU[j]*t_EU[i])*(conA[j] + genA[j])
+        acts[c,2] <- 0.1 + (1+EU[j]*t_EU[i])*genA[j]
+        acts[c,3] <- 0.1 + (exp(-rm[j]*t_rm[k])*d[j]*(1+EU[j]*t_EU[i])*conA[j]) + (1+EU[j]*t_EU[i])*genA[j]
+        acts[c,4] <- 0.1 + (1+EU[j]*t_EU[i])*genA[j]
+        acts[c,5] <- 0.1
+        acts[c,6] <-t_EU[i]
+        acts[c,7] <-t_rm[k]
+        # 
+        c <- c + 1 
+      }
+  
+  
+  colnames(acts) <- c("A_IIP","A_IOP","A_DIP","A_DIOP","A_NPL","t_EU","t_rm")
   
   # summarize activations
-  if(length(A_IIP) != 1){
-    acts <- cbind(A_IIP,A_IOP,A_DIP,A_DOP,A_NPL)
-  }else{
-    acts <- c(A_IIP,A_IOP,A_DIP,A_DOP,A_NPL)
-  }
+  # if(length(A_IIP) != 1){
+  #   acts <- cbind(A_IIP,A_IOP,A_DIP,A_DOP,A_NPL)
+  # }else{
+  #   acts <- c(A_IIP,A_IOP,A_DIP,A_DOP,A_NPL)
+  # }
   
   # compute summed activation
-  sumActs <- apply(t(respOpts*t(acts)),1,sum)
+  sumActs <- apply(t(respOpts*t(acts[,1:5])),1,sum)
   
-  Probs <- t(respOpts*t(acts))/sumActs
+  Probs <- t(respOpts*t(acts[,1:5]))/sumActs
   
   colnames(Probs) <- c("P_IIP","P_IOP","P_DIP","P_DOP","P_NPL")
   
@@ -200,18 +221,18 @@ simData_UpdatingModel_test <- function(parmsMMM,respOpts,nRetrievals,CWI,WCI,fix
   }
   
   
-  time <- crossing(t_rm,t_EU)
-  time <- as.matrix(do.call(rbind, replicate(length(unique(ID)), time, simplify=FALSE)))
-  data <- cbind(ID,simdata,time)
+
+  data <- cbind(ID,simdata,acts[,6:7])
   colnames(data) <- c("ID","IIP","IOP","DIP","DOP","NPL","t_rm","t_EU")
   return(data)
 }
-data <- simData_UpdatingModel_test(ParmsUpd,as.vector(respOpt_Cspan(N,K)),nRetrievals,conCWI,conWCI,fixtime,enctime)
+data <- simData_UpdatingModel_test(parms,c(1,8,1,4,16),nRetrievals,conCWI,conWCI,fixtime,enctime)
 
+resp <- c()
 # Create Stan Data 
 stan.dat <- list(count = data[,2:6], 
                  K = 5,
-                 R = as.vector(respOpt_Cspan(N,K)),
+                 R = c(1,8,1,4,16),
                  J = length(sigs)-1,
                  N = length(unique(data[,"ID"])),
                  Con1 = nFT,
@@ -230,7 +251,7 @@ upd_fit <- m3_upd$sample(stan.dat,chains=4,
                          #adapt_delta=0.95,
                          max_treedepth = 15,
                          init=init_nc)
-
+upd_fit$output()
 # Plot some subj theta results
 mcmc_combo(upd_fit$draws(c("subj_pars[1,3]","subj_pars[2,3]","subj_pars[4,3]","subj_pars[5,3]","d[3]")))
 # Plot hyper pars

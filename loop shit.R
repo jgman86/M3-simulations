@@ -1,37 +1,42 @@
 
-baseA <-rep(0.1,5) 
-EU <- rep(0.8,5)
-conA <- rep(8,5)
-genA <- rep(4,5)
-rm <- rep(0.76,5)
-d <- rep(0.6,5)
+baseA <-c(0.1,0.1,0.1)
+EU <- c(0.8,0.4,0.2)
+conA <- c(6,9,11)
+genA <- c(3,6,7)
+rm <-  c(0.7,0.2,0.5)
+d <- c(0.6,0.2,0.9)
 t_EU <- c(0.2,1)
 t_rm <- c(0.5,2)
 Con1 <- 2
 Con2 <- 2
-c <- 1
+
 time <- crossing(t_rm,t_EU)
 
-acts <- matrix(NaN, ncol = 7,nrow = 3)
-acts_IIP <-c()
+acts <- matrix(NaN, ncol = 7,nrow =12)
 colnames(acts) <- c("IIP","IOP","DIP","DIOP","NPL","t_EU","t_rm")
+
+
+  c <- 1
   
-for (i in 1:100)
-{
-  for (j in 1:2)
+          for(j in 1:3)
+            for (i in 1:2)
+              for(k in 1:2)
+                
     {
   
-
-      acts_IIP[j + (i-1)*Con1] <- baseA + (1+EU*t_EU[j])*(conA + genA) 
-      # acts[j + (i-1)*Con1*Con2,2] <- baseA + (1+EU*t_EU[j])*genA
-      # acts[j + (i-1)*Con1*Con2,3] <- baseA + (exp(-rm*t_rm[j])*d*(1+EU*t_EU[j])*conA) + (1+EU*t_EU[j])*genA 
-      # acts[j + (i-1)*Con1*Con2,4] <- baseA + (1+EU*i)*genA
-      # acts[j + (i-1)*Con1*Con2,5] <- baseA
-      # acts[j + (i-1)*Con1*Con2,6] <- i
-      # acts[j + (i-1)*Con1*Con2,7] <- j
-    
+      
+      acts[c,1] <- j
+      acts[c,2] <- 0.1 + (1+EU[j]*t_EU[i])*(conA[j] + genA[j])
+      acts[c,2] <- 0.1 + (1+EU[j]*t_EU[i])*genA[j]
+      acts[c,3] <- 0.1 + (exp(-rm[j]*t_rm[k])*d[j]*(1+EU[j]*t_EU[i])*conA[j]) + (1+EU[j]*t_EU[i])*genA[j]
+      acts[c,4] <- 0.1 + (1+EU[j]*t_EU[i])*genA[j]
+      acts[c,5] <- 0.1
+      acts[c,6] <-t_EU[i]
+      acts[c,7] <-t_rm[k]
+      # 
+      c <- c + 1 
   }
-}
+
 
 rm(acts)
 for (i in 1:100)

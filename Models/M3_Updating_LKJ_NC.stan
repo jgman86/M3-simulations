@@ -31,7 +31,7 @@ data {
   array[K] int R;                  // Number of available responses per category for one position
   array[N*Con1*Con2,K] int count; // Observed Data
   vector[N*Con1*Con2] t_eU;     // Cue-Word-Interval - extended Updating benefit
-  vector[N*Con1*Con2] t_rm;    // New Word-Cue Interval - removal benefit after after new presented Item for an old item
+  vector[N*Con2*Con1] t_rm;    // New Word-Cue Interval - removal benefit after after new presented Item for an old item
   int retrievals;
 }
 
@@ -57,14 +57,14 @@ transformed parameters{
     // Transform d Parameter
     real mu_d = inv_logit(hyper_pars[3]);
     row_vector[N] d = inv_logit(subj_pars[3,]);
-
+    
     // Activations
     array[N*Con1*Con2] real acts_IIP;
     array[N*Con1*Con2] real acts_IOP;
     array[N*Con1*Con2] real acts_OIP;
     array[N*Con1*Con2] real acts_OO;
     array[N*Con1*Con2] real acts_NPL;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
+    
     // probabilities
     vector[K] probs[N*Con1*Con2];
     array[N*Con1*Con2] real SummedActs;
@@ -72,9 +72,11 @@ transformed parameters{
     
     // loop over subjects and conditions to compute activations and probabilites
     
-    for (i in 1:N){ // for each subject
-      for(j in 1:Con1*Con2) {
-      
+    for (i in 1:N)
+      { // for each subject
+        for(j in 1:Con1*Con2) {
+
+
       // EE on a and c, removal and deletion on c only fitted best
       acts_IIP[j + (i-1)*Con1*Con2] = 0.1 + (1+subj_pars[4,i]*t_eU[j])*(subj_pars[2,i] + subj_pars[1,i]); // Item in Position                      
       acts_IOP[j + (i-1)*Con1*Con2] = 0.1 + (1+subj_pars[4,i]*t_eU[j])*subj_pars[2,i];        // Item in Other Position
@@ -91,8 +93,8 @@ transformed parameters{
       probs[j + (i-1)*Con1*Con2,4] = (R[4] * acts_OO[j + (i-1)*Con1*Con2]) ./ (SummedActs[j + (i-1)*Con1*Con2]);
       probs[j + (i-1)*Con1*Con2,5] = (R[5] * acts_NPL[j + (i-1)*Con1*Con2]) ./ (SummedActs[j + (i-1)*Con1*Con2]);
     }
-    }
-    
+
+}
 }
 
 model {
@@ -143,14 +145,14 @@ generated quantities{
   
   
   
-
+  
   for (i in 1:N)
   for(j in 1:Con1*Con2)
   {
     {
-
+      
       count_rep[j + (i-1)*Con1*Con2,] = multinomial_rng(probs[j + (i-1)*Con1*Con2,], retrievals);
-
+      
     }
   }
 }
